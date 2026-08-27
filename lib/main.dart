@@ -244,6 +244,21 @@ class _BloomHomePageState extends State<BloomHomePage> {
     await _loadPosts();
   }
 
+  Future<void> _addMedia(XFile file) async {
+    final post = BloomPost(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: 'Ayie',
+      text: '',
+      mood: 'New Bloom',
+      location: 'BLOOM',
+      imagePath: file.path,
+      createdAt: DateTime.now(),
+    );
+
+    await BloomStore.addPost(post);
+    await _loadPosts();
+  }
+
   Future<void> createThought() async {
     final thought = await showDialog<String>(
       context: context,
@@ -302,8 +317,8 @@ class _BloomHomePageState extends State<BloomHomePage> {
                     onThought: (thought) async {
                       await _addThought(thought);
                     },
-                    onMedia: (file) {
-                      setState(() => newMedia = file);
+                    onMedia: (file) async {
+                      await _addMedia(file);
                     },
                   ),
                 ),
