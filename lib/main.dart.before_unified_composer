@@ -6,8 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 const premiumBlue = Color(0xFFC56A4A);
 const lightBlue = Color(0xFFF8EDE8);
@@ -26,7 +24,6 @@ class BloomPost {
   final String? imagePath;
   final String? videoPath;
   final String? voicePath;
-  final String? listening;
   final DateTime createdAt;
   bool liked;
   bool bookmarked;
@@ -40,7 +37,6 @@ class BloomPost {
     this.imagePath,
     this.videoPath,
     this.voicePath,
-    this.listening,
     required this.createdAt,
     this.liked = false,
     this.bookmarked = false,
@@ -53,7 +49,6 @@ class BloomPost {
     String? imagePath,
     String? videoPath,
     String? voicePath,
-    String? listening,
     bool? liked,
     bool? bookmarked,
   }) {
@@ -66,7 +61,6 @@ class BloomPost {
       imagePath: imagePath ?? this.imagePath,
       videoPath: videoPath ?? this.videoPath,
       voicePath: voicePath ?? this.voicePath,
-      listening: listening ?? this.listening,
       createdAt: createdAt,
       liked: liked ?? this.liked,
       bookmarked: bookmarked ?? this.bookmarked,
@@ -83,7 +77,6 @@ class BloomPost {
       imagePath ?? '',
       videoPath ?? '',
       voicePath ?? '',
-      listening ?? '',
       createdAt.millisecondsSinceEpoch.toString(),
       liked ? '1' : '0',
       bookmarked ? '1' : '0',
@@ -110,8 +103,8 @@ class BloomPost {
       );
     }
 
-    // Format baru: 12 field.
-    if (parts.length < 12) return null;
+    // Format baru: 11 field.
+    if (parts.length < 11) return null;
 
     return BloomPost(
       id: parts[0],
@@ -122,12 +115,11 @@ class BloomPost {
       imagePath: parts[5].isEmpty ? null : parts[5],
       videoPath: parts[6].isEmpty ? null : parts[6],
       voicePath: parts[7].isEmpty ? null : parts[7],
-      listening: parts[8].isEmpty ? null : parts[8],
       createdAt: DateTime.fromMillisecondsSinceEpoch(
-        int.tryParse(parts[9]) ?? 0,
+        int.tryParse(parts[8]) ?? 0,
       ),
-      liked: parts[10] == '1',
-      bookmarked: parts[11] == '1',
+      liked: parts[9] == '1',
+      bookmarked: parts[10] == '1',
     );
   }
 }
@@ -230,27 +222,18 @@ class _BloomShellState extends State<BloomShell> {
               context: context,
               showDragHandle: true,
               builder: (_) => CreateBloomSheet(
-                onCreate:
-                    ({
-                      String text = '',
-                      XFile? image,
-                      XFile? video,
-                      String? location,
-                      String? voicePath,
-                      String? listening,
-                    }) async {
-                      await homeKey.currentState?._addUnifiedBloom(
-                        text: text,
-                        image: image,
-                        video: video,
-                        location: location,
-                        voicePath: voicePath,
-                        listening: listening,
-                      );
-                      if (mounted) {
-                        setState(() => index = 0);
-                      }
-                    },
+                onThought: (thought) async {
+                  await homeKey.currentState?._addThought(thought);
+                  if (mounted) {
+                    setState(() => index = 0);
+                  }
+                },
+                onMedia: (file) async {
+                  await homeKey.currentState?._addMedia(file);
+                  if (mounted) {
+                    setState(() => index = 0);
+                  }
+                },
               ),
             );
           } else {
@@ -330,14 +313,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
     await _loadPosts();
   }
 
-  Future<void> _addUnifiedBloom({
-    String text = '',
-    XFile? image,
-    XFile? video,
-    String? location,
-    String? voicePath,
-    String? listening,
-  }) async {
+  Future<void> _addMedia(XFile file) async {
     final appDir = await getApplicationDocumentsDirectory();
     final mediaDir = Directory('${appDir.path}/bloom_media');
 
@@ -345,36 +321,22 @@ class _BloomHomePageState extends State<BloomHomePage> {
       await mediaDir.create(recursive: true);
     }
 
-    String? savedImagePath;
-    String? savedVideoPath;
+    final extension = file.path.contains('.')
+        ? file.path.split('.').last
+        : 'jpg';
 
-    if (image != null) {
-      final ext = image.path.contains('.') ? image.path.split('.').last : 'jpg';
+    final savedPath =
+        '${mediaDir.path}/${DateTime.now().microsecondsSinceEpoch}.$extension';
 
-      final path =
-          '${mediaDir.path}/${DateTime.now().microsecondsSinceEpoch}_image.$ext';
-
-      savedImagePath = (await File(image.path).copy(path)).path;
-    }
-
-    if (video != null) {
-      final ext = video.path.contains('.') ? video.path.split('.').last : 'mp4';
-
-      final path =
-          '${mediaDir.path}/${DateTime.now().microsecondsSinceEpoch}_video.$ext';
-
-      savedVideoPath = (await File(video.path).copy(path)).path;
-    }
+    final savedFile = await File(file.path).copy(savedPath);
 
     final post = BloomPost(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       name: 'Ayie',
-      text: text.trim(),
-      mood: listening != null ? 'Listening $listening' : 'New Bloom',
-      location: location ?? 'BLOOM',
-      imagePath: savedImagePath,
-      videoPath: savedVideoPath,
-      voicePath: voicePath,
+      text: '',
+      mood: 'New Bloom',
+      location: 'BLOOM',
+      imagePath: savedFile.path,
       createdAt: DateTime.now(),
     );
 
@@ -532,24 +494,12 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   context: context,
                   showDragHandle: true,
                   builder: (_) => CreateBloomSheet(
-                    onCreate:
-                        ({
-                          String text = '',
-                          XFile? image,
-                          XFile? video,
-                          String? location,
-                          String? voicePath,
-                          String? listening,
-                        }) async {
-                          await _addUnifiedBloom(
-                            text: text,
-                            image: image,
-                            video: video,
-                            location: location,
-                            voicePath: voicePath,
-                            listening: listening,
-                          );
-                        },
+                    onThought: (thought) async {
+                      await _addThought(thought);
+                    },
+                    onMedia: (file) async {
+                      await _addMedia(file);
+                    },
                   ),
                 ),
                 child: const _PremiumCard(
@@ -582,7 +532,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
                     imagePath: post.imagePath,
                     videoPath: post.videoPath,
                     voicePath: post.voicePath,
-                    listening: post.listening,
                     initiallyLiked: post.liked,
                     initiallyBookmarked: post.bookmarked,
                     onEdit: () => _editPost(post),
@@ -767,7 +716,6 @@ class _PostCard extends StatefulWidget {
   final String? imagePath;
   final String? videoPath;
   final String? voicePath;
-  final String? listening;
   final bool initiallyLiked;
   final bool initiallyBookmarked;
   final VoidCallback? onEdit;
@@ -784,7 +732,6 @@ class _PostCard extends StatefulWidget {
     this.imagePath,
     this.videoPath,
     this.voicePath,
-    this.listening,
     this.initiallyLiked = false,
     this.initiallyBookmarked = false,
     this.onEdit,
@@ -801,8 +748,6 @@ class _PostCardState extends State<_PostCard> {
   late bool liked;
   late bool bookmarked;
   VideoPlayerController? _videoController;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool _voicePlaying = false;
 
   @override
   void initState() {
@@ -810,8 +755,8 @@ class _PostCardState extends State<_PostCard> {
     liked = widget.initiallyLiked;
     bookmarked = widget.initiallyBookmarked;
 
-    if (widget.videoPath != null) {
-      _videoController = VideoPlayerController.file(File(widget.videoPath!))
+    if (widget.imagePath != null && _isVideoFile(widget.imagePath!)) {
+      _videoController = VideoPlayerController.file(File(widget.imagePath!))
         ..initialize().then((_) {
           if (mounted) setState(() {});
         });
@@ -821,43 +766,7 @@ class _PostCardState extends State<_PostCard> {
   @override
   void dispose() {
     _videoController?.dispose();
-    _audioPlayer.dispose();
     super.dispose();
-  }
-
-  Future<void> _toggleVoice() async {
-    final path = widget.voicePath;
-    if (path == null) return;
-
-    if (_voicePlaying) {
-      await _audioPlayer.stop();
-      if (mounted) setState(() => _voicePlaying = false);
-      return;
-    }
-
-    await _audioPlayer.play(DeviceFileSource(path));
-
-    if (mounted) {
-      setState(() => _voicePlaying = true);
-    }
-
-    _audioPlayer.onPlayerComplete.first.then((_) {
-      if (mounted) setState(() => _voicePlaying = false);
-    });
-  }
-
-  Future<void> _openLocation() async {
-    final value = widget.location.trim();
-
-    if (value.isEmpty || value == 'BLOOM') return;
-
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(value)}',
-    );
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
   }
 
   @override
@@ -1020,67 +929,15 @@ class _PostCardState extends State<_PostCard> {
             ),
           ],
 
-          if (widget.voicePath != null) ...[
-            const SizedBox(height: 12),
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _toggleVoice,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: lightBlue,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _voicePlaying
-                          ? Icons.stop_circle_rounded
-                          : Icons.play_circle_fill_rounded,
-                      color: premiumBlue,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _voicePlaying
-                            ? 'Memutar Voice Bloom...'
-                            : 'Voice Bloom',
-                        style: const TextStyle(
-                          color: navy,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const Icon(Icons.graphic_eq_rounded, color: premiumBlue),
-                  ],
-                ),
-              ),
-            ),
-          ],
-
           const SizedBox(height: 12),
 
           Wrap(
             spacing: 7,
             children: [
               _Pill(widget.mood, Icons.sentiment_satisfied_alt),
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: _openLocation,
-                child: _Pill(widget.location, Icons.location_on_outlined),
-              ),
+              _Pill(widget.location, Icons.location_on_outlined),
             ],
           ),
-
-          if (widget.listening != null) ...[
-            const SizedBox(height: 10),
-            _Pill('Listening ${widget.listening!}', Icons.music_note_rounded),
-          ],
 
           const Divider(height: 25),
 
@@ -1294,312 +1151,93 @@ class BloomVoiceRecorder {
   }
 }
 
-class CreateBloomSheet extends StatefulWidget {
-  final Future<void> Function({
-    String text,
-    XFile? image,
-    XFile? video,
-    String? location,
-    String? voicePath,
-    String? listening,
-  })?
-  onCreate;
+class CreateBloomSheet extends StatelessWidget {
+  final ValueChanged<String>? onThought;
+  final ValueChanged<XFile>? onMedia;
 
-  const CreateBloomSheet({super.key, this.onCreate});
-
-  @override
-  State<CreateBloomSheet> createState() => _CreateBloomSheetState();
-}
-
-class _CreateBloomSheetState extends State<CreateBloomSheet> {
-  final textController = TextEditingController();
-  final recorder = BloomVoiceRecorder();
-
-  XFile? image;
-  XFile? video;
-  String? location;
-  String? voicePath;
-  String? listening;
-  bool recording = false;
-  bool publishing = false;
-
-  @override
-  void dispose() {
-    textController.dispose();
-    recorder.dispose();
-    super.dispose();
-  }
-
-  Future<void> pickImage() async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery);
-
-    if (file != null && mounted) {
-      setState(() => image = file);
-    }
-  }
-
-  Future<void> pickVideo() async {
-    final picker = ImagePicker();
-    final file = await picker.pickVideo(source: ImageSource.gallery);
-
-    if (file != null && mounted) {
-      setState(() => video = file);
-    }
-  }
-
-  Future<void> pickLocation() async {
-    final result = await getBloomLocation();
-
-    if (!mounted) return;
-
-    if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Lokasi belum aktif. Aktifkan GPS dan izin lokasi BLOOM.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    setState(() => location = result);
-  }
-
-  Future<void> toggleVoice() async {
-    if (!recording) {
-      final path = await recorder.start();
-
-      if (!mounted) return;
-
-      if (path == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin mikrofon belum diberikan.')),
-        );
-        return;
-      }
-
-      setState(() {
-        recording = true;
-        voicePath = path;
-      });
-      return;
-    }
-
-    final path = await recorder.stop();
-
-    if (!mounted) return;
-
-    setState(() {
-      recording = false;
-      voicePath = path ?? voicePath;
-    });
-  }
-
-  Future<void> chooseListening() async {
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(18),
-              child: Text(
-                'Listening',
-                style: TextStyle(
-                  color: navy,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            for (final item in [
-              'Music',
-              'Podcast',
-              'Radio',
-              'Audiobook',
-              'Nothing',
-            ])
-              ListTile(
-                leading: const Icon(
-                  Icons.music_note_rounded,
-                  color: premiumBlue,
-                ),
-                title: Text(item),
-                onTap: () => Navigator.pop(context, item),
-              ),
-          ],
-        ),
-      ),
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        listening = result == 'Nothing' ? null : result;
-      });
-    }
-  }
-
-  Future<void> publish() async {
-    if (publishing) return;
-
-    final text = textController.text.trim();
-
-    if (text.isEmpty &&
-        image == null &&
-        video == null &&
-        location == null &&
-        voicePath == null &&
-        listening == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tambahkan sesuatu sebelum membuat Bloom.'),
-        ),
-      );
-      return;
-    }
-
-    setState(() => publishing = true);
-
-    await widget.onCreate?.call(
-      text: text,
-      image: image,
-      video: video,
-      location: location,
-      voicePath: voicePath,
-      listening: listening,
-    );
-
-    if (mounted) {
-      Navigator.pop(context);
-    }
-  }
+  const CreateBloomSheet({super.key, this.onThought, this.onMedia});
 
   @override
   Widget build(BuildContext context) {
+    final items = [
+      ('Photo & Video', Icons.photo_library_outlined),
+      ('Thought', Icons.edit_note_rounded),
+      ('Check-in', Icons.location_on_outlined),
+      ('Listening', Icons.music_note_rounded),
+      ('Watching', Icons.movie_outlined),
+      ('Reading', Icons.menu_book_rounded),
+      ('Asleep', Icons.bedtime_rounded),
+      ('Awake', Icons.wb_sunny_outlined),
+    ];
+
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 25),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Center(
-              child: Text(
-                'Create a Bloom',
-                style: TextStyle(
-                  color: navy,
-                  fontSize: 23,
-                  fontWeight: FontWeight.w900,
-                ),
+            const Text(
+              'Create a Bloom',
+              style: TextStyle(
+                color: navy,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 18),
-
-            TextField(
-              controller: textController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                hintText: 'Apa yang ingin kamu bagikan hari ini?',
-                filled: true,
-                fillColor: lightBlue,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
+            ...items.map(
+              (item) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: lightBlue,
+                  child: Icon(item.$2, color: premiumBlue),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ActionChip(
-                  avatar: const Icon(Icons.photo_outlined),
-                  label: Text(image == null ? 'Foto' : 'Foto ✓'),
-                  onPressed: pickImage,
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.videocam_outlined),
-                  label: Text(video == null ? 'Video' : 'Video ✓'),
-                  onPressed: pickVideo,
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.location_on_outlined),
-                  label: Text(location == null ? 'Lokasi' : 'Lokasi ✓'),
-                  onPressed: pickLocation,
-                ),
-                ActionChip(
-                  avatar: Icon(
-                    recording
-                        ? Icons.stop_circle_outlined
-                        : Icons.mic_none_rounded,
+                title: Text(
+                  item.$1,
+                  style: const TextStyle(
+                    color: navy,
+                    fontWeight: FontWeight.w800,
                   ),
-                  label: Text(recording ? 'Stop Voice' : 'Voice'),
-                  onPressed: toggleVoice,
                 ),
-                ActionChip(
-                  avatar: const Icon(Icons.music_note_rounded),
-                  label: Text(listening == null ? 'Listening' : listening!),
-                  onPressed: chooseListening,
-                ),
-              ],
-            ),
+                trailing: const Icon(Icons.chevron_right, color: softText),
+                onTap: () async {
+                  if (item.$1 == 'Thought') {
+                    final thought = await showDialog<String>(
+                      context: context,
+                      builder: (_) => const ThoughtDialog(),
+                    );
 
-            if (image != null) ...[
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.file(
-                  File(image!.path),
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ],
+                    if (thought != null && thought.trim().isNotEmpty) {
+                      onThought?.call(thought.trim());
+                    }
 
-            if (video != null) ...[
-              const SizedBox(height: 10),
-              const _Pill('Video siap', Icons.videocam_rounded),
-            ],
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  } else if (item.$1 == 'Photo & Video') {
+                    final file = await _pickBloomMedia(context);
 
-            if (location != null) ...[
-              const SizedBox(height: 10),
-              _Pill(location!, Icons.location_on_rounded),
-            ],
+                    if (file != null) {
+                      onMedia?.call(file);
+                    }
 
-            if (voicePath != null) ...[
-              const SizedBox(height: 10),
-              const _Pill('Voice siap', Icons.mic_rounded),
-            ],
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  } else {
+                    Navigator.pop(context);
 
-            if (listening != null) ...[
-              const SizedBox(height: 10),
-              _Pill(listening!, Icons.music_note_rounded),
-            ],
-
-            const SizedBox(height: 22),
-
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: premiumBlue,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: publishing ? null : publish,
-                icon: const Icon(Icons.bubble_chart_rounded),
-                label: Text(
-                  publishing ? 'MEMBUAT...' : 'POST BLOOM',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${item.$1} siap diaktifkan berikutnya.',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                },
               ),
             ),
           ],
@@ -1607,6 +1245,55 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
       ),
     );
   }
+}
+
+Future<XFile?> _pickBloomMedia(BuildContext context) async {
+  final picker = ImagePicker();
+
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    backgroundColor: Colors.white,
+    showDragHandle: true,
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Choose Media',
+              style: TextStyle(
+                color: navy,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(
+              Icons.photo_library_outlined,
+              color: premiumBlue,
+            ),
+            title: const Text('Gallery'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt_outlined, color: premiumBlue),
+            title: const Text('Camera'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (source == null) return null;
+
+  if (source == ImageSource.camera) {
+    return picker.pickImage(source: ImageSource.camera);
+  }
+
+  return picker.pickMedia();
 }
 
 class ThoughtDialog extends StatefulWidget {

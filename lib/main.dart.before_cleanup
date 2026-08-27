@@ -6,8 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 const premiumBlue = Color(0xFFC56A4A);
 const lightBlue = Color(0xFFF8EDE8);
@@ -330,6 +328,45 @@ class _BloomHomePageState extends State<BloomHomePage> {
     await _loadPosts();
   }
 
+  Future<void> _addMedia(XFile file) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final mediaDir = Directory('${appDir.path}/bloom_media');
+
+    if (!await mediaDir.exists()) {
+      await mediaDir.create(recursive: true);
+    }
+
+    final extension = file.path.contains('.')
+        ? file.path.split('.').last
+        : 'jpg';
+
+    final savedPath =
+        '${mediaDir.path}/${DateTime.now().microsecondsSinceEpoch}.$extension';
+
+    final savedFile = await File(file.path).copy(savedPath);
+
+    final isVideo = [
+      'mp4',
+      'mov',
+      'mkv',
+      'webm',
+    ].contains(extension.toLowerCase());
+
+    final post = BloomPost(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: 'Ayie',
+      text: '',
+      mood: 'New Bloom',
+      location: '',
+      imagePath: isVideo ? null : savedFile.path,
+      videoPath: isVideo ? savedFile.path : null,
+      createdAt: DateTime.now(),
+    );
+
+    await BloomStore.addPost(post);
+    await _loadPosts();
+  }
+
   Future<void> _addUnifiedBloom({
     String text = '',
     XFile? image,
@@ -582,7 +619,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
                     imagePath: post.imagePath,
                     videoPath: post.videoPath,
                     voicePath: post.voicePath,
-                    listening: post.listening,
                     initiallyLiked: post.liked,
                     initiallyBookmarked: post.bookmarked,
                     onEdit: () => _editPost(post),
@@ -767,7 +803,6 @@ class _PostCard extends StatefulWidget {
   final String? imagePath;
   final String? videoPath;
   final String? voicePath;
-  final String? listening;
   final bool initiallyLiked;
   final bool initiallyBookmarked;
   final VoidCallback? onEdit;
@@ -784,7 +819,6 @@ class _PostCard extends StatefulWidget {
     this.imagePath,
     this.videoPath,
     this.voicePath,
-    this.listening,
     this.initiallyLiked = false,
     this.initiallyBookmarked = false,
     this.onEdit,
@@ -801,8 +835,6 @@ class _PostCardState extends State<_PostCard> {
   late bool liked;
   late bool bookmarked;
   VideoPlayerController? _videoController;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool _voicePlaying = false;
 
   @override
   void initState() {
@@ -810,8 +842,8 @@ class _PostCardState extends State<_PostCard> {
     liked = widget.initiallyLiked;
     bookmarked = widget.initiallyBookmarked;
 
-    if (widget.videoPath != null) {
-      _videoController = VideoPlayerController.file(File(widget.videoPath!))
+    if (widget.imagePath != null && _isVideoFile(widget.imagePath!)) {
+      _videoController = VideoPlayerController.file(File(widget.imagePath!))
         ..initialize().then((_) {
           if (mounted) setState(() {});
         });
@@ -821,43 +853,7 @@ class _PostCardState extends State<_PostCard> {
   @override
   void dispose() {
     _videoController?.dispose();
-    _audioPlayer.dispose();
     super.dispose();
-  }
-
-  Future<void> _toggleVoice() async {
-    final path = widget.voicePath;
-    if (path == null) return;
-
-    if (_voicePlaying) {
-      await _audioPlayer.stop();
-      if (mounted) setState(() => _voicePlaying = false);
-      return;
-    }
-
-    await _audioPlayer.play(DeviceFileSource(path));
-
-    if (mounted) {
-      setState(() => _voicePlaying = true);
-    }
-
-    _audioPlayer.onPlayerComplete.first.then((_) {
-      if (mounted) setState(() => _voicePlaying = false);
-    });
-  }
-
-  Future<void> _openLocation() async {
-    final value = widget.location.trim();
-
-    if (value.isEmpty || value == 'BLOOM') return;
-
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(value)}',
-    );
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
   }
 
   @override
@@ -1020,67 +1016,15 @@ class _PostCardState extends State<_PostCard> {
             ),
           ],
 
-          if (widget.voicePath != null) ...[
-            const SizedBox(height: 12),
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _toggleVoice,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: lightBlue,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _voicePlaying
-                          ? Icons.stop_circle_rounded
-                          : Icons.play_circle_fill_rounded,
-                      color: premiumBlue,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _voicePlaying
-                            ? 'Memutar Voice Bloom...'
-                            : 'Voice Bloom',
-                        style: const TextStyle(
-                          color: navy,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const Icon(Icons.graphic_eq_rounded, color: premiumBlue),
-                  ],
-                ),
-              ),
-            ),
-          ],
-
           const SizedBox(height: 12),
 
           Wrap(
             spacing: 7,
             children: [
               _Pill(widget.mood, Icons.sentiment_satisfied_alt),
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: _openLocation,
-                child: _Pill(widget.location, Icons.location_on_outlined),
-              ),
+              _Pill(widget.location, Icons.location_on_outlined),
             ],
           ),
-
-          if (widget.listening != null) ...[
-            const SizedBox(height: 10),
-            _Pill('Listening ${widget.listening!}', Icons.music_note_rounded),
-          ],
 
           const Divider(height: 25),
 
@@ -1607,6 +1551,55 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
       ),
     );
   }
+}
+
+Future<XFile?> _pickBloomMedia(BuildContext context) async {
+  final picker = ImagePicker();
+
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    backgroundColor: Colors.white,
+    showDragHandle: true,
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Choose Media',
+              style: TextStyle(
+                color: navy,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(
+              Icons.photo_library_outlined,
+              color: premiumBlue,
+            ),
+            title: const Text('Gallery'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt_outlined, color: premiumBlue),
+            title: const Text('Camera'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (source == null) return null;
+
+  if (source == ImageSource.camera) {
+    return picker.pickImage(source: ImageSource.camera);
+  }
+
+  return picker.pickMedia();
 }
 
 class ThoughtDialog extends StatefulWidget {
