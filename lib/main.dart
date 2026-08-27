@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const premiumBlue = Color(0xFFC56A4A);
 const lightBlue = Color(0xFFF8EDE8);
@@ -9,6 +10,103 @@ const softText = Color(0xFF718096);
 const pageBg = Color(0xFFF7F9FC);
 
 void main() => runApp(const BloomApp());
+
+
+class BloomPost {
+  final String id;
+  final String name;
+  final String text;
+  final String mood;
+  final String location;
+  final String? imagePath;
+  final DateTime createdAt;
+  bool liked;
+  bool bookmarked;
+
+  BloomPost({
+    required this.id,
+    required this.name,
+    required this.text,
+    required this.mood,
+    required this.location,
+    this.imagePath,
+    required this.createdAt,
+    this.liked = false,
+    this.bookmarked = false,
+  });
+
+  String encode() {
+    return [
+      id,
+      name,
+      text.replaceAll('|', ' '),
+      mood,
+      location.replaceAll('|', ' '),
+      imagePath ?? '',
+      createdAt.millisecondsSinceEpoch.toString(),
+      liked ? '1' : '0',
+      bookmarked ? '1' : '0',
+    ].join('|');
+  }
+
+  static BloomPost? decode(String value) {
+    final parts = value.split('|');
+    if (parts.length < 9) return null;
+
+    return BloomPost(
+      id: parts[0],
+      name: parts[1],
+      text: parts[2],
+      mood: parts[3],
+      location: parts[4],
+      imagePath: parts[5].isEmpty ? null : parts[5],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        int.tryParse(parts[6]) ?? 0,
+      ),
+      liked: parts[7] == '1',
+      bookmarked: parts[8] == '1',
+    );
+  }
+}
+
+class BloomStore {
+  static const _postsKey = 'bloom_posts_v1';
+
+  static Future<List<BloomPost>> loadPosts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_postsKey) ?? [];
+
+    return raw
+        .map(BloomPost.decode)
+        .whereType<BloomPost>()
+        .toList();
+  }
+
+  static Future<void> savePosts(List<BloomPost> posts) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(
+      _postsKey,
+      posts.map((post) => post.encode()).toList(),
+    );
+  }
+
+  static Future<void> addPost(BloomPost post) async {
+    final posts = await loadPosts();
+    posts.insert(0, post);
+    await savePosts(posts);
+  }
+
+  static Future<void> updatePost(BloomPost post) async {
+    final posts = await loadPosts();
+    final index = posts.indexWhere((p) => p.id == post.id);
+
+    if (index >= 0) {
+      posts[index] = post;
+      await savePosts(posts);
+    }
+  }
+}
 
 class BloomApp extends StatelessWidget {
   const BloomApp({super.key});
@@ -113,8 +211,38 @@ class BloomHomePage extends StatefulWidget {
 }
 
 class _BloomHomePageState extends State<BloomHomePage> {
-  String? newThought;
+  List<BloomPost> posts = [];
   XFile? newMedia;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPosts();
+  }
+
+  Future<void> _loadPosts() async {
+    final loaded = await BloomStore.loadPosts();
+
+    if (!mounted) return;
+
+    setState(() {
+      posts = loaded;
+    });
+  }
+
+  Future<void> _addThought(String thought) async {
+    final post = BloomPost(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: 'Ayie',
+      text: thought.trim(),
+      mood: 'Feeling thoughtful',
+      location: 'BLOOM',
+      createdAt: DateTime.now(),
+    );
+
+    await BloomStore.addPost(post);
+    await _loadPosts();
+  }
 
   Future<void> createThought() async {
     final thought = await showDialog<String>(
@@ -123,7 +251,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
     );
 
     if (thought != null && thought.trim().isNotEmpty) {
-      setState(() => newThought = thought.trim());
+      await _addThought(thought);
     }
   }
 
@@ -171,8 +299,8 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   context: context,
                   showDragHandle: true,
                   builder: (_) => CreateBloomSheet(
-                    onThought: (thought) {
-                      setState(() => newThought = thought);
+                    onThought: (thought) async {
+                      await _addThought(thought);
                     },
                     onMedia: (file) {
                       setState(() => newMedia = file);
@@ -197,27 +325,29 @@ class _BloomHomePageState extends State<BloomHomePage> {
               const SizedBox(height: 14),
               const _StoryRow(),
               const SizedBox(height: 20),
-              if (newMedia != null) ...[
-                _PostCard(
-                  name: 'Ayie',
-                  letter: 'A',
-                  text: '',
-                  mood: 'New Bloom',
-                  location: 'BLOOM',
-                  imagePath: newMedia!.path,
+              ...posts.map(
+                (post) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _PostCard(
+                    name: post.name,
+                    letter: post.name.isNotEmpty ? post.name[0] : 'A',
+                    text: post.text,
+                    mood: post.mood,
+                    location: post.location,
+                    imagePath: post.imagePath,
+                    initiallyLiked: post.liked,
+                    initiallyBookmarked: post.bookmarked,
+                    onLikeChanged: (value) async {
+                      post.liked = value;
+                      await BloomStore.updatePost(post);
+                    },
+                    onBookmarkChanged: (value) async {
+                      post.bookmarked = value;
+                      await BloomStore.updatePost(post);
+                    },
+                  ),
                 ),
-                const SizedBox(height: 16),
-              ],
-              if (newThought != null) ...[
-                _PostCard(
-                  name: 'Ayie',
-                  letter: 'A',
-                  text: newThought!,
-                  mood: 'Feeling thoughtful',
-                  location: 'BLOOM',
-                ),
-                const SizedBox(height: 16),
-              ],
+              ),
               const _PostCard(
                 name: 'Ayie',
                 letter: 'A',
@@ -375,6 +505,10 @@ class _PostCard extends StatefulWidget {
   final String mood;
   final String location;
   final String? imagePath;
+  final bool initiallyLiked;
+  final bool initiallyBookmarked;
+  final ValueChanged<bool>? onLikeChanged;
+  final ValueChanged<bool>? onBookmarkChanged;
 
   const _PostCard({
     required this.name,
@@ -383,6 +517,10 @@ class _PostCard extends StatefulWidget {
     required this.mood,
     required this.location,
     this.imagePath,
+    this.initiallyLiked = false,
+    this.initiallyBookmarked = false,
+    this.onLikeChanged,
+    this.onBookmarkChanged,
   });
 
   @override
@@ -390,7 +528,15 @@ class _PostCard extends StatefulWidget {
 }
 
 class _PostCardState extends State<_PostCard> {
-  bool liked = false;
+  late bool liked;
+  late bool bookmarked;
+
+  @override
+  void initState() {
+    super.initState();
+    liked = widget.initiallyLiked;
+    bookmarked = widget.initiallyBookmarked;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +621,10 @@ class _PostCardState extends State<_PostCard> {
           Row(
             children: [
               IconButton(
-                onPressed: () => setState(() => liked = !liked),
+                onPressed: () {
+                  setState(() => liked = !liked);
+                  widget.onLikeChanged?.call(liked);
+                },
                 icon: Icon(
                   liked ? Icons.favorite : Icons.favorite_border,
                   color: liked ? premiumBlue : softText,
@@ -485,7 +634,16 @@ class _PostCardState extends State<_PostCard> {
               const SizedBox(width: 20),
               const Icon(Icons.ios_share, color: softText),
               const Spacer(),
-              const Icon(Icons.bookmark_border, color: softText),
+              IconButton(
+                onPressed: () {
+                  setState(() => bookmarked = !bookmarked);
+                  widget.onBookmarkChanged?.call(bookmarked);
+                },
+                icon: Icon(
+                  bookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: bookmarked ? premiumBlue : softText,
+                ),
+              ),
             ],
           ),
         ],
