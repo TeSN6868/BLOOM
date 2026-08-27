@@ -628,7 +628,9 @@ Future<void> _pickBloomMedia(BuildContext context) async {
 
   if (source == null) return;
 
-  final file = await picker.pickMedia(source: source);
+  final file = source == ImageSource.camera
+    ? await picker.pickImage(source: ImageSource.camera)
+    : await picker.pickMedia();
 
   if (file == null || !context.mounted) return;
 
