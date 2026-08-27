@@ -555,12 +555,99 @@ class CreateBloomSheet extends StatelessWidget {
                   ),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: softText),
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  if (item.$1 == 'Thought') {
+                    Navigator.pop(context);
+                    showDialog(
+                      context: context,
+                      builder: (_) => const ThoughtDialog(),
+                    );
+                  } else {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${item.$1} siap diaktifkan berikutnya.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+
+class ThoughtDialog extends StatefulWidget {
+  const ThoughtDialog({super.key});
+
+  @override
+  State<ThoughtDialog> createState() => _ThoughtDialogState();
+}
+
+class _ThoughtDialogState extends State<ThoughtDialog> {
+  final controller = TextEditingController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      title: const Text(
+        'What are you thinking?',
+        style: TextStyle(
+          color: navy,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLines: 5,
+        decoration: InputDecoration(
+          hintText: 'Tulis sesuatu yang berarti...',
+          filled: true,
+          fillColor: lightBlue,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'Batal',
+            style: TextStyle(color: softText),
+          ),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: premiumBlue,
+          ),
+          onPressed: () {
+            if (controller.text.trim().isEmpty) return;
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Thought berhasil dibuat.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+          child: const Text('Bloom'),
+        ),
+      ],
     );
   }
 }
