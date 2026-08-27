@@ -2239,7 +2239,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
 
                   Positioned(
-                    left: 18,
+                    right: 18,
                     bottom: 18,
                     child: Material(
                       color: Colors.black.withValues(alpha: 0.42),
@@ -2254,204 +2254,209 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
+
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 18,
+                    child: GestureDetector(
+                      onTap: _pickProfilePhoto,
+                      child: Container(
+                        width: 116,
+                        height: 116,
+                        margin: const EdgeInsets.symmetric(horizontal: 60),
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.28),
+                              blurRadius: 18,
+                              offset: const Offset(0, 7),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: hasProfilePhoto
+                              ? Image.file(
+                                  File(profilePhotoPath!),
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  color: lightBlue,
+                                  child: const Icon(
+                                    Icons.person_rounded,
+                                    color: premiumBlue,
+                                    size: 60,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
 
           SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -58),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: _pickProfilePhoto,
-                    child: Container(
-                      width: 116,
-                      height: 116,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.16),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: hasProfilePhoto
-                            ? Image.file(
-                                File(profilePhotoPath!),
-                                fit: BoxFit.cover,
-                              )
-                            : Container(
-                                color: lightBlue,
-                                child: const Icon(
-                                  Icons.person_rounded,
-                                  color: premiumBlue,
-                                  size: 60,
-                                ),
-                              ),
-                      ),
-                    ),
+            child: Column(
+              children: [
+                const SizedBox(height: 18),
+
+                const SizedBox(height: 11),
+
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 27,
+                    fontWeight: FontWeight.w900,
                   ),
+                ),
 
-                  const SizedBox(height: 11),
+                const SizedBox(height: 2),
 
-                  Text(
-                    name,
+                Text(
+                  '@$username',
+                  style: const TextStyle(
+                    color: premiumBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 34),
+                  child: Text(
+                    bio,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: navy,
-                      fontSize: 27,
-                      fontWeight: FontWeight.w900,
+                      color: softText,
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 2),
+                const SizedBox(height: 18),
 
-                  Text(
-                    '@$username',
-                    style: const TextStyle(
-                      color: premiumBlue,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 17,
+                      horizontal: 5,
                     ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 34),
-                    child: Text(
-                      bio,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: softText,
-                        fontSize: 14,
-                        height: 1.4,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 17,
-                        horizontal: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(23),
-                      ),
-                      child: Row(
-                        children: [
-                          _stat(
-                            value: '12',
-                            label: 'Blooms',
-                            icon: Icons.local_florist_rounded,
-                          ),
-                          _stat(
-                            value: '128',
-                            label: 'Bloomers',
-                            icon: Icons.spa_rounded,
-                          ),
-                          _stat(
-                            value: '86',
-                            label: 'Aura',
-                            icon: Icons.auto_awesome_rounded,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    child: Column(
-                      children: [
-                        _profileTile(
-                          icon: Icons.music_note_rounded,
-                          title: 'Music',
-                          subtitle: 'What is blooming in your ears',
-                        ),
-                        _profileTile(
-                          icon: Icons.photo_library_rounded,
-                          title: 'Photos',
-                          subtitle: 'Visual moments from your journey',
-                        ),
-                        _profileTile(
-                          icon: Icons.videocam_rounded,
-                          title: 'Videos',
-                          subtitle: 'Moving moments you created',
-                        ),
-                        _profileTile(
-                          icon: Icons.mic_rounded,
-                          title: 'Voice',
-                          subtitle: 'Your voice, your story',
-                        ),
-                        _profileTile(
-                          icon: Icons.bookmark_rounded,
-                          title: 'Saved',
-                          subtitle: 'Blooms you want to keep',
-                        ),
-                        _profileTile(
-                          icon: Icons.local_florist_rounded,
-                          title: 'Garden',
-                          subtitle: 'Your growing circle',
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 7),
-
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 18),
-                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(23),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        const Text(
-                          'Interests',
-                          style: TextStyle(
-                            color: navy,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        _stat(
+                          value: '12',
+                          label: 'Blooms',
+                          icon: Icons.local_florist_rounded,
                         ),
-                        const SizedBox(height: 13),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _tag('Music'),
-                            _tag('Photography'),
-                            _tag('Travel'),
-                            _tag('Stories'),
-                            _tag('Nature'),
-                          ],
+                        _stat(
+                          value: '128',
+                          label: 'Bloomers',
+                          icon: Icons.spa_rounded,
+                        ),
+                        _stat(
+                          value: '86',
+                          label: 'Aura',
+                          icon: Icons.auto_awesome_rounded,
                         ),
                       ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 30),
-                ],
-              ),
+                const SizedBox(height: 20),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Column(
+                    children: [
+                      _profileTile(
+                        icon: Icons.music_note_rounded,
+                        title: 'Music',
+                        subtitle: 'What is blooming in your ears',
+                      ),
+                      _profileTile(
+                        icon: Icons.photo_library_rounded,
+                        title: 'Photos',
+                        subtitle: 'Visual moments from your journey',
+                      ),
+                      _profileTile(
+                        icon: Icons.videocam_rounded,
+                        title: 'Videos',
+                        subtitle: 'Moving moments you created',
+                      ),
+                      _profileTile(
+                        icon: Icons.mic_rounded,
+                        title: 'Voice',
+                        subtitle: 'Your voice, your story',
+                      ),
+                      _profileTile(
+                        icon: Icons.bookmark_rounded,
+                        title: 'Saved',
+                        subtitle: 'Blooms you want to keep',
+                      ),
+                      _profileTile(
+                        icon: Icons.local_florist_rounded,
+                        title: 'Garden',
+                        subtitle: 'Your growing circle',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 7),
+
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Interests',
+                        style: TextStyle(
+                          color: navy,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 13),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _tag('Music'),
+                          _tag('Photography'),
+                          _tag('Travel'),
+                          _tag('Stories'),
+                          _tag('Nature'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+              ],
             ),
           ),
         ],
