@@ -1,0 +1,49 @@
+name: Build BLOOM APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout BLOOM
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.2'
+          channel: stable
+          cache: true
+
+      - name: Flutter Doctor
+        run: flutter doctor -v
+
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      - name: Build Debug APK
+        run: flutter build apk --debug
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-debug.apk app-debug.apk
+
+      - name: Upload app-debug.apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
