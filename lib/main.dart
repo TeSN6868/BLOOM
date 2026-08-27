@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-const premiumBlue = Color(0xFF1557D6);
-const lightBlue = Color(0xFFEAF3FF);
-const navy = Color(0xFF14213D);
+const premiumBlue = Color(0xFFC56A4A);
+const lightBlue = Color(0xFFF8EDE8);
+const navy = Color(0xFF243044);
 const softText = Color(0xFF718096);
 const pageBg = Color(0xFFF7F9FC);
 
@@ -256,7 +256,7 @@ class _StoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final names = ['Your Bloom', 'Rina', 'Dewi', 'Budi', 'Maya'];
+    final names = ['Your Bloom'];
 
     return SizedBox(
       height: 92,
