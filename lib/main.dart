@@ -1750,15 +1750,714 @@ class NotificationsPage extends StatelessWidget {
   );
 }
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) => const _SimplePage(
-    icon: Icons.person,
-    title: 'Profile',
-    subtitle: 'Profil dan momen milikmu.',
-  );
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  static const _profilePhotoKey = 'bloom_profile_photo';
+  static const _backgroundPhotoKey = 'bloom_profile_background';
+  static const _nameKey = 'bloom_profile_name';
+  static const _usernameKey = 'bloom_profile_username';
+  static const _bioKey = 'bloom_profile_bio';
+
+  final ImagePicker _picker = ImagePicker();
+
+  String name = 'Ayie';
+  String username = 'ayie';
+  String bio = 'Menemukan keindahan dalam hal-hal sederhana. 🌸';
+
+  String? profilePhotoPath;
+  String? backgroundPhotoPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (!mounted) return;
+
+    setState(() {
+      name = prefs.getString(_nameKey) ?? 'Ayie';
+      username = prefs.getString(_usernameKey) ?? 'ayie';
+      bio =
+          prefs.getString(_bioKey) ??
+          'Menemukan keindahan dalam hal-hal sederhana. 🌸';
+      profilePhotoPath = prefs.getString(_profilePhotoKey);
+      backgroundPhotoPath = prefs.getString(_backgroundPhotoKey);
+    });
+  }
+
+  Future<String> _copyPhotoToBloomFolder(XFile file, String prefix) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final folder = Directory('${dir.path}/bloom_profile');
+
+    if (!await folder.exists()) {
+      await folder.create(recursive: true);
+    }
+
+    final extension = file.path.contains('.')
+        ? file.path.split('.').last
+        : 'jpg';
+
+    final destination =
+        '${folder.path}/${prefix}_${DateTime.now().microsecondsSinceEpoch}.$extension';
+
+    return (await File(file.path).copy(destination)).path;
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    final file = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (file == null) return;
+
+    final savedPath = await _copyPhotoToBloomFolder(file, 'profile');
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(_profilePhotoKey, savedPath);
+
+    if (!mounted) return;
+
+    setState(() {
+      profilePhotoPath = savedPath;
+    });
+  }
+
+  Future<void> _pickBackgroundPhoto() async {
+    final file = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (file == null) return;
+
+    final savedPath = await _copyPhotoToBloomFolder(file, 'background');
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(_backgroundPhotoKey, savedPath);
+
+    if (!mounted) return;
+
+    setState(() {
+      backgroundPhotoPath = savedPath;
+    });
+  }
+
+  Future<void> _editProfileInfo() async {
+    final nameController = TextEditingController(text: name);
+    final usernameController = TextEditingController(text: username);
+    final bioController = TextEditingController(text: bio);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Center(
+                    child: Text(
+                      'Edit Your Bloom',
+                      style: TextStyle(
+                        color: navy,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  const Text(
+                    'Nama',
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 7),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: lightBlue,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  const Text(
+                    'Username',
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 7),
+                  TextField(
+                    controller: usernameController,
+                    decoration: InputDecoration(
+                      prefixText: '@',
+                      filled: true,
+                      fillColor: lightBlue,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  const Text(
+                    'Tentang kamu',
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 7),
+                  TextField(
+                    controller: bioController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Ceritakan sedikit tentang dirimu...',
+                      filled: true,
+                      fillColor: lightBlue,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: premiumBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(17),
+                        ),
+                      ),
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+
+                        final newName = nameController.text.trim();
+                        final newUsername = usernameController.text.trim();
+                        final newBio = bioController.text.trim();
+
+                        await prefs.setString(
+                          _nameKey,
+                          newName.isEmpty ? 'Ayie' : newName,
+                        );
+                        await prefs.setString(
+                          _usernameKey,
+                          newUsername.isEmpty ? 'ayie' : newUsername,
+                        );
+                        await prefs.setString(
+                          _bioKey,
+                          newBio.isEmpty
+                              ? 'Menemukan keindahan dalam hal-hal sederhana. 🌸'
+                              : newBio,
+                        );
+
+                        if (!mounted) return;
+
+                        setState(() {
+                          name = newName.isEmpty ? 'Ayie' : newName;
+                          username = newUsername.isEmpty ? 'ayie' : newUsername;
+                          bio = newBio.isEmpty
+                              ? 'Menemukan keindahan dalam hal-hal sederhana. 🌸'
+                              : newBio;
+                        });
+
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'Simpan Perubahan',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    nameController.dispose();
+    usernameController.dispose();
+    bioController.dispose();
+  }
+
+  Future<void> _showEditMenu() async {
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Customize Your Bloom',
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: premiumBlue,
+                  child: Icon(Icons.person_rounded, color: Colors.white),
+                ),
+                title: const Text(
+                  'Foto profil',
+                  style: TextStyle(color: navy, fontWeight: FontWeight.w800),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickProfilePhoto();
+                },
+              ),
+
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: premiumBlue,
+                  child: Icon(Icons.landscape_rounded, color: Colors.white),
+                ),
+                title: const Text(
+                  'Background profil',
+                  style: TextStyle(color: navy, fontWeight: FontWeight.w800),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickBackgroundPhoto();
+                },
+              ),
+
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: premiumBlue,
+                  child: Icon(Icons.edit_rounded, color: Colors.white),
+                ),
+                title: const Text(
+                  'Nama, username & bio',
+                  style: TextStyle(color: navy, fontWeight: FontWeight.w800),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editProfileInfo();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _stat({
+    required String value,
+    required String label,
+    required IconData icon,
+  }) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: premiumBlue, size: 21),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              color: navy,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: softText,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(19),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: premiumBlue,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: softText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: softText),
+        ],
+      ),
+    );
+  }
+
+  Widget _tag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+      decoration: BoxDecoration(
+        color: lightBlue,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: navy,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasProfilePhoto =
+        profilePhotoPath != null && File(profilePhotoPath!).existsSync();
+
+    final hasBackground =
+        backgroundPhotoPath != null && File(backgroundPhotoPath!).existsSync();
+
+    return Scaffold(
+      backgroundColor: pageBg,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 245,
+            pinned: true,
+            backgroundColor: premiumBlue,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            actions: [
+              IconButton(
+                tooltip: 'Customize',
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: _showEditMenu,
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (hasBackground)
+                    Image.file(File(backgroundPhotoPath!), fit: BoxFit.cover)
+                  else
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [premiumBlue, navy],
+                        ),
+                      ),
+                    ),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.05),
+                          Colors.black.withValues(alpha: 0.42),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    left: 18,
+                    bottom: 18,
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.42),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: 'Ganti background',
+                        icon: const Icon(
+                          Icons.camera_alt_rounded,
+                          color: Colors.white,
+                        ),
+                        onPressed: _pickBackgroundPhoto,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Transform.translate(
+              offset: const Offset(0, -58),
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: _pickProfilePhoto,
+                    child: Container(
+                      width: 116,
+                      height: 116,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: hasProfilePhoto
+                            ? Image.file(
+                                File(profilePhotoPath!),
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                color: lightBlue,
+                                child: const Icon(
+                                  Icons.person_rounded,
+                                  color: premiumBlue,
+                                  size: 60,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 11),
+
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      color: navy,
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  Text(
+                    '@$username',
+                    style: const TextStyle(
+                      color: premiumBlue,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 34),
+                    child: Text(
+                      bio,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: softText,
+                        fontSize: 14,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 17,
+                        horizontal: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(23),
+                      ),
+                      child: Row(
+                        children: [
+                          _stat(
+                            value: '12',
+                            label: 'Blooms',
+                            icon: Icons.local_florist_rounded,
+                          ),
+                          _stat(
+                            value: '128',
+                            label: 'Bloomers',
+                            icon: Icons.spa_rounded,
+                          ),
+                          _stat(
+                            value: '86',
+                            label: 'Aura',
+                            icon: Icons.auto_awesome_rounded,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Column(
+                      children: [
+                        _profileTile(
+                          icon: Icons.music_note_rounded,
+                          title: 'Music',
+                          subtitle: 'What is blooming in your ears',
+                        ),
+                        _profileTile(
+                          icon: Icons.photo_library_rounded,
+                          title: 'Photos',
+                          subtitle: 'Visual moments from your journey',
+                        ),
+                        _profileTile(
+                          icon: Icons.videocam_rounded,
+                          title: 'Videos',
+                          subtitle: 'Moving moments you created',
+                        ),
+                        _profileTile(
+                          icon: Icons.mic_rounded,
+                          title: 'Voice',
+                          subtitle: 'Your voice, your story',
+                        ),
+                        _profileTile(
+                          icon: Icons.bookmark_rounded,
+                          title: 'Saved',
+                          subtitle: 'Blooms you want to keep',
+                        ),
+                        _profileTile(
+                          icon: Icons.local_florist_rounded,
+                          title: 'Garden',
+                          subtitle: 'Your growing circle',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 7),
+
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 18),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Interests',
+                          style: TextStyle(
+                            color: navy,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 13),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _tag('Music'),
+                            _tag('Photography'),
+                            _tag('Travel'),
+                            _tag('Stories'),
+                            _tag('Nature'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SimplePage extends StatelessWidget {
