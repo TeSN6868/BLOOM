@@ -3,6 +3,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
 const premiumBlue = Color(0xFFC56A4A);
@@ -16,10 +18,12 @@ void main() => runApp(const BloomApp());
 class BloomPost {
   final String id;
   final String name;
-  final String text;
+  String text;
   final String mood;
   final String location;
   final String? imagePath;
+  final String? videoPath;
+  final String? voicePath;
   final DateTime createdAt;
   bool liked;
   bool bookmarked;
@@ -31,19 +35,48 @@ class BloomPost {
     required this.mood,
     required this.location,
     this.imagePath,
+    this.videoPath,
+    this.voicePath,
     required this.createdAt,
     this.liked = false,
     this.bookmarked = false,
   });
+
+  BloomPost copyWith({
+    String? text,
+    String? mood,
+    String? location,
+    String? imagePath,
+    String? videoPath,
+    String? voicePath,
+    bool? liked,
+    bool? bookmarked,
+  }) {
+    return BloomPost(
+      id: id,
+      name: name,
+      text: text ?? this.text,
+      mood: mood ?? this.mood,
+      location: location ?? this.location,
+      imagePath: imagePath ?? this.imagePath,
+      videoPath: videoPath ?? this.videoPath,
+      voicePath: voicePath ?? this.voicePath,
+      createdAt: createdAt,
+      liked: liked ?? this.liked,
+      bookmarked: bookmarked ?? this.bookmarked,
+    );
+  }
 
   String encode() {
     return [
       id,
       name,
       text.replaceAll('|', ' '),
-      mood,
+      mood.replaceAll('|', ' '),
       location.replaceAll('|', ' '),
       imagePath ?? '',
+      videoPath ?? '',
+      voicePath ?? '',
       createdAt.millisecondsSinceEpoch.toString(),
       liked ? '1' : '0',
       bookmarked ? '1' : '0',
@@ -52,7 +85,26 @@ class BloomPost {
 
   static BloomPost? decode(String value) {
     final parts = value.split('|');
-    if (parts.length < 9) return null;
+
+    // Format lama: 9 field.
+    if (parts.length == 9) {
+      return BloomPost(
+        id: parts[0],
+        name: parts[1],
+        text: parts[2],
+        mood: parts[3],
+        location: parts[4],
+        imagePath: parts[5].isEmpty ? null : parts[5],
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          int.tryParse(parts[6]) ?? 0,
+        ),
+        liked: parts[7] == '1',
+        bookmarked: parts[8] == '1',
+      );
+    }
+
+    // Format baru: 11 field.
+    if (parts.length < 11) return null;
 
     return BloomPost(
       id: parts[0],
@@ -61,11 +113,13 @@ class BloomPost {
       mood: parts[3],
       location: parts[4],
       imagePath: parts[5].isEmpty ? null : parts[5],
+      videoPath: parts[6].isEmpty ? null : parts[6],
+      voicePath: parts[7].isEmpty ? null : parts[7],
       createdAt: DateTime.fromMillisecondsSinceEpoch(
-        int.tryParse(parts[6]) ?? 0,
+        int.tryParse(parts[8]) ?? 0,
       ),
-      liked: parts[7] == '1',
-      bookmarked: parts[8] == '1',
+      liked: parts[9] == '1',
+      bookmarked: parts[10] == '1',
     );
   }
 }
@@ -103,6 +157,12 @@ class BloomStore {
       posts[index] = post;
       await savePosts(posts);
     }
+  }
+
+  static Future<void> deletePost(String id) async {
+    final posts = await loadPosts();
+    posts.removeWhere((post) => post.id == id);
+    await savePosts(posts);
   }
 }
 
@@ -284,6 +344,101 @@ class _BloomHomePageState extends State<BloomHomePage> {
     await _loadPosts();
   }
 
+  Future<void> _editPost(BloomPost post) async {
+    final controller = TextEditingController(text: post.text);
+
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Edit status',
+          style: TextStyle(color: navy, fontWeight: FontWeight.w900),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 5,
+          decoration: InputDecoration(
+            hintText: 'Tulis keterangan status...',
+            filled: true,
+            fillColor: lightBlue,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal', style: TextStyle(color: softText)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: premiumBlue),
+            onPressed: () {
+              Navigator.pop(context, controller.text.trim());
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (edited == null) return;
+
+    post.text = edited;
+    await BloomStore.updatePost(post);
+    await _loadPosts();
+  }
+
+  Future<void> _deletePost(BloomPost post) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Hapus status?',
+          style: TextStyle(color: navy, fontWeight: FontWeight.w900),
+        ),
+        content: const Text(
+          'Status ini akan dihapus dari BLOOM.',
+          style: TextStyle(color: softText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal', style: TextStyle(color: softText)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: premiumBlue),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await BloomStore.deletePost(post.id);
+
+    if (!mounted) return;
+
+    setState(() {
+      posts.removeWhere((item) => item.id == post.id);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Status berhasil dihapus.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> createThought() async {
     final thought = await showDialog<String>(
       context: context,
@@ -375,8 +530,12 @@ class _BloomHomePageState extends State<BloomHomePage> {
                     mood: post.mood,
                     location: post.location,
                     imagePath: post.imagePath,
+                    videoPath: post.videoPath,
+                    voicePath: post.voicePath,
                     initiallyLiked: post.liked,
                     initiallyBookmarked: post.bookmarked,
+                    onEdit: () => _editPost(post),
+                    onDelete: () => _deletePost(post),
                     onLikeChanged: (value) async {
                       post.liked = value;
                       await BloomStore.updatePost(post);
@@ -555,8 +714,12 @@ class _PostCard extends StatefulWidget {
   final String mood;
   final String location;
   final String? imagePath;
+  final String? videoPath;
+  final String? voicePath;
   final bool initiallyLiked;
   final bool initiallyBookmarked;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final ValueChanged<bool>? onLikeChanged;
   final ValueChanged<bool>? onBookmarkChanged;
 
@@ -567,8 +730,12 @@ class _PostCard extends StatefulWidget {
     required this.mood,
     required this.location,
     this.imagePath,
+    this.videoPath,
+    this.voicePath,
     this.initiallyLiked = false,
     this.initiallyBookmarked = false,
+    this.onEdit,
+    this.onDelete,
     this.onLikeChanged,
     this.onBookmarkChanged,
   });
@@ -642,7 +809,51 @@ class _PostCardState extends State<_PostCard> {
                   ),
                 ),
               ),
-              const Icon(Icons.more_horiz, color: softText),
+              PopupMenuButton<String>(
+                color: Colors.white,
+                icon: const Icon(Icons.more_horiz, color: softText),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    widget.onEdit?.call();
+                  } else if (value == 'delete') {
+                    widget.onDelete?.call();
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, color: premiumBlue),
+                        SizedBox(width: 10),
+                        Text(
+                          'Edit Status',
+                          style: TextStyle(
+                            color: navy,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, color: premiumBlue),
+                        SizedBox(width: 10),
+                        Text(
+                          'Hapus Status',
+                          style: TextStyle(
+                            color: navy,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 15),
@@ -871,6 +1082,75 @@ class _Activity extends StatelessWidget {
   }
 }
 
+Future<String?> getBloomLocation() async {
+  try {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      return null;
+    }
+
+    var permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+      ),
+    );
+
+    return '${position.latitude.toStringAsFixed(6)}, '
+        '${position.longitude.toStringAsFixed(6)}';
+  } catch (_) {
+    return null;
+  }
+}
+
+class BloomVoiceRecorder {
+  final AudioRecorder recorder = AudioRecorder();
+
+  Future<String?> start() async {
+    if (!await recorder.hasPermission()) {
+      return null;
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final voiceDir = Directory('${dir.path}/bloom_voice');
+
+    if (!await voiceDir.exists()) {
+      await voiceDir.create(recursive: true);
+    }
+
+    final path =
+        '${voiceDir.path}/${DateTime.now().microsecondsSinceEpoch}.m4a';
+
+    await recorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        sampleRate: 44100,
+      ),
+      path: path,
+    );
+
+    return path;
+  }
+
+  Future<String?> stop() async {
+    return recorder.stop();
+  }
+
+  Future<void> dispose() async {
+    await recorder.dispose();
+  }
+}
+
 class CreateBloomSheet extends StatelessWidget {
   final ValueChanged<String>? onThought;
   final ValueChanged<XFile>? onMedia;
@@ -1066,6 +1346,69 @@ class _ThoughtDialogState extends State<ThoughtDialog> {
             Navigator.pop(context, controller.text.trim());
           },
           child: const Text('Bloom'),
+        ),
+      ],
+    );
+  }
+}
+
+class EditStatusDialog extends StatefulWidget {
+  final String initialText;
+
+  const EditStatusDialog({super.key, required this.initialText});
+
+  @override
+  State<EditStatusDialog> createState() => _EditStatusDialogState();
+}
+
+class _EditStatusDialogState extends State<EditStatusDialog> {
+  late final TextEditingController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      title: const Text(
+        'Edit Status',
+        style: TextStyle(color: navy, fontWeight: FontWeight.w900),
+      ),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLines: 6,
+        decoration: InputDecoration(
+          hintText: 'Tulis keterangan status...',
+          filled: true,
+          fillColor: lightBlue,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal', style: TextStyle(color: softText)),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: premiumBlue),
+          onPressed: () {
+            Navigator.pop(context, controller.text.trim());
+          },
+          child: const Text('Simpan'),
         ),
       ],
     );
