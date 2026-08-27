@@ -4,10 +4,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-android {\n    ndkVersion = "28.2.13676358"
+android {
     namespace = "com.bloom.app.bloom"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.2.12479018"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
