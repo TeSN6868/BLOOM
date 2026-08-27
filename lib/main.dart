@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
 
 const premiumBlue = Color(0xFFC56A4A);
 const lightBlue = Color(0xFFF8EDE8);
@@ -10,7 +12,6 @@ const softText = Color(0xFF718096);
 const pageBg = Color(0xFFF7F9FC);
 
 void main() => runApp(const BloomApp());
-
 
 class BloomPost {
   final String id;
@@ -76,10 +77,7 @@ class BloomStore {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_postsKey) ?? [];
 
-    return raw
-        .map(BloomPost.decode)
-        .whereType<BloomPost>()
-        .toList();
+    return raw.map(BloomPost.decode).whereType<BloomPost>().toList();
   }
 
   static Future<void> savePosts(List<BloomPost> posts) async {
@@ -140,10 +138,12 @@ class BloomShell extends StatefulWidget {
 class _BloomShellState extends State<BloomShell> {
   int index = 0;
 
+  final homeKey = GlobalKey<_BloomHomePageState>();
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const BloomHomePage(),
+      BloomHomePage(key: homeKey),
       const CirclePage(),
       const SizedBox(),
       const NotificationsPage(),
@@ -162,8 +162,17 @@ class _BloomShellState extends State<BloomShell> {
               context: context,
               showDragHandle: true,
               builder: (_) => CreateBloomSheet(
-                onThought: (thought) {
-                  setState(() => index = 0);
+                onThought: (thought) async {
+                  await homeKey.currentState?._addThought(thought);
+                  if (mounted) {
+                    setState(() => index = 0);
+                  }
+                },
+                onMedia: (file) async {
+                  await homeKey.currentState?._addMedia(file);
+                  if (mounted) {
+                    setState(() => index = 0);
+                  }
                 },
               ),
             );
@@ -245,13 +254,29 @@ class _BloomHomePageState extends State<BloomHomePage> {
   }
 
   Future<void> _addMedia(XFile file) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final mediaDir = Directory('${appDir.path}/bloom_media');
+
+    if (!await mediaDir.exists()) {
+      await mediaDir.create(recursive: true);
+    }
+
+    final extension = file.path.contains('.')
+        ? file.path.split('.').last
+        : 'jpg';
+
+    final savedPath =
+        '${mediaDir.path}/${DateTime.now().microsecondsSinceEpoch}.$extension';
+
+    final savedFile = await File(file.path).copy(savedPath);
+
     final post = BloomPost(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       name: 'Ayie',
       text: '',
       mood: 'New Bloom',
       location: 'BLOOM',
-      imagePath: file.path,
+      imagePath: savedFile.path,
       createdAt: DateTime.now(),
     );
 
@@ -513,6 +538,16 @@ class _StoryRow extends StatelessWidget {
   }
 }
 
+bool _isVideoFile(String path) {
+  final lower = path.toLowerCase();
+  return lower.endsWith('.mp4') ||
+      lower.endsWith('.mov') ||
+      lower.endsWith('.m4v') ||
+      lower.endsWith('.avi') ||
+      lower.endsWith('.mkv') ||
+      lower.endsWith('.webm');
+}
+
 class _PostCard extends StatefulWidget {
   final String name;
   final String letter;
@@ -545,12 +580,26 @@ class _PostCard extends StatefulWidget {
 class _PostCardState extends State<_PostCard> {
   late bool liked;
   late bool bookmarked;
+  VideoPlayerController? _videoController;
 
   @override
   void initState() {
     super.initState();
     liked = widget.initiallyLiked;
     bookmarked = widget.initiallyBookmarked;
+
+    if (widget.imagePath != null && _isVideoFile(widget.imagePath!)) {
+      _videoController = VideoPlayerController.file(File(widget.imagePath!))
+        ..initialize().then((_) {
+          if (mounted) setState(() {});
+        });
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -613,11 +662,59 @@ class _PostCardState extends State<_PostCard> {
             if (widget.text.isNotEmpty) const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: Image.file(
-                File(widget.imagePath!),
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              child: _isVideoFile(widget.imagePath!)
+                  ? (_videoController != null &&
+                            _videoController!.value.isInitialized
+                        ? AspectRatio(
+                            aspectRatio: _videoController!.value.aspectRatio,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                VideoPlayer(_videoController!),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      if (_videoController!.value.isPlaying) {
+                                        _videoController!.pause();
+                                      } else {
+                                        _videoController!.play();
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 58,
+                                    height: 58,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(
+                                        alpha: .55,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      _videoController!.value.isPlaying
+                                          ? Icons.pause
+                                          : Icons.play_arrow,
+                                      color: Colors.white,
+                                      size: 34,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox(
+                            height: 220,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: premiumBlue,
+                              ),
+                            ),
+                          ))
+                  : Image.file(
+                      File(widget.imagePath!),
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
             ),
           ],
 
@@ -823,8 +920,6 @@ class CreateBloomSheet extends StatelessWidget {
                 ),
                 trailing: const Icon(Icons.chevron_right, color: softText),
                 onTap: () async {
-                  Navigator.pop(context);
-
                   if (item.$1 == 'Thought') {
                     final thought = await showDialog<String>(
                       context: context,
@@ -834,19 +929,33 @@ class CreateBloomSheet extends StatelessWidget {
                     if (thought != null && thought.trim().isNotEmpty) {
                       onThought?.call(thought.trim());
                     }
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   } else if (item.$1 == 'Photo & Video') {
                     final file = await _pickBloomMedia(context);
 
                     if (file != null) {
                       onMedia?.call(file);
                     }
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${item.$1} siap diaktifkan berikutnya.'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    Navigator.pop(context);
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${item.$1} siap diaktifkan berikutnya.',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   }
                 },
               ),
