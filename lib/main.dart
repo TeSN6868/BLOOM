@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -62,7 +63,11 @@ class _BloomShellState extends State<BloomShell> {
             showModalBottomSheet(
               context: context,
               showDragHandle: true,
-              builder: (_) => const CreateBloomSheet(),
+              builder: (_) => CreateBloomSheet(
+                onThought: (thought) {
+                  setState(() => index = 0);
+                },
+              ),
             );
           } else {
             setState(() => index = i);
@@ -109,6 +114,7 @@ class BloomHomePage extends StatefulWidget {
 
 class _BloomHomePageState extends State<BloomHomePage> {
   String? newThought;
+  XFile? newMedia;
 
   Future<void> createThought() async {
     final thought = await showDialog<String>(
@@ -164,7 +170,14 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 onTap: () => showModalBottomSheet(
                   context: context,
                   showDragHandle: true,
-                  builder: (_) => const CreateBloomSheet(),
+                  builder: (_) => CreateBloomSheet(
+                    onThought: (thought) {
+                      setState(() => newThought = thought);
+                    },
+                    onMedia: (file) {
+                      setState(() => newMedia = file);
+                    },
+                  ),
                 ),
                 child: const _PremiumCard(
                   icon: Icons.add_rounded,
@@ -184,6 +197,17 @@ class _BloomHomePageState extends State<BloomHomePage> {
               const SizedBox(height: 14),
               const _StoryRow(),
               const SizedBox(height: 20),
+              if (newMedia != null) ...[
+                _PostCard(
+                  name: 'Ayie',
+                  letter: 'A',
+                  text: '',
+                  mood: 'New Bloom',
+                  location: 'BLOOM',
+                  imagePath: newMedia!.path,
+                ),
+                const SizedBox(height: 16),
+              ],
               if (newThought != null) ...[
                 _PostCard(
                   name: 'Ayie',
@@ -197,7 +221,8 @@ class _BloomHomePageState extends State<BloomHomePage> {
               const _PostCard(
                 name: 'Ayie',
                 letter: 'A',
-                text: 'Hari ini terasa sederhana, tapi justru hal-hal kecil seperti ini yang ingin aku simpan. ✨',
+                text:
+                    'Hari ini terasa sederhana, tapi justru hal-hal kecil seperti ini yang ingin aku simpan. ✨',
                 mood: 'Feeling peaceful',
                 location: 'Bandung',
               ),
@@ -205,7 +230,8 @@ class _BloomHomePageState extends State<BloomHomePage> {
               const _PostCard(
                 name: 'BLOOM',
                 letter: 'B',
-                text: 'Selamat datang di BLOOM — tempat menyimpan momen yang benar-benar berarti.',
+                text:
+                    'Selamat datang di BLOOM — tempat menyimpan momen yang benar-benar berarti.',
                 mood: 'Feeling grateful',
                 location: 'BLOOM',
               ),
@@ -261,15 +287,22 @@ class _PremiumCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: navy,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle,
-                    style: const TextStyle(
-                        color: softText, fontWeight: FontWeight.bold)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: softText,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -292,7 +325,7 @@ class _StoryRow extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: names.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 15),
+        separatorBuilder: (_, _) => const SizedBox(width: 15),
         itemBuilder: (_, i) => SizedBox(
           width: 70,
           child: Column(
@@ -341,6 +374,7 @@ class _PostCard extends StatefulWidget {
   final String text;
   final String mood;
   final String location;
+  final String? imagePath;
 
   const _PostCard({
     required this.name,
@@ -348,6 +382,7 @@ class _PostCard extends StatefulWidget {
     required this.text,
     required this.mood,
     required this.location,
+    this.imagePath,
   });
 
   @override
@@ -401,16 +436,32 @@ class _PostCardState extends State<_PostCard> {
             ],
           ),
           const SizedBox(height: 15),
-          Text(
-            widget.text,
-            style: const TextStyle(
-              color: navy,
-              fontSize: 15,
-              height: 1.5,
-              fontWeight: FontWeight.w600,
+
+          if (widget.text.isNotEmpty)
+            Text(
+              widget.text,
+              style: const TextStyle(
+                color: navy,
+                fontSize: 15,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+
+          if (widget.imagePath != null) ...[
+            if (widget.text.isNotEmpty) const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.file(
+                File(widget.imagePath!),
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
+
           const SizedBox(height: 12),
+
           Wrap(
             spacing: 7,
             children: [
@@ -418,7 +469,9 @@ class _PostCardState extends State<_PostCard> {
               _Pill(widget.location, Icons.location_on_outlined),
             ],
           ),
+
           const Divider(height: 25),
+
           Row(
             children: [
               IconButton(
@@ -490,17 +543,23 @@ class _ActivityCard extends StatelessWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('YOUR DAY',
-              style: TextStyle(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 11)),
+          Text(
+            'YOUR DAY',
+            style: TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.w900,
+              fontSize: 11,
+            ),
+          ),
           SizedBox(height: 5),
-          Text('Little activities',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900)),
+          Text(
+            'Little activities',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -529,18 +588,24 @@ class _Activity extends StatelessWidget {
       children: [
         Icon(icon, color: Colors.white),
         const SizedBox(height: 7),
-        Text(text,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w800)),
+        Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ],
     );
   }
 }
 
 class CreateBloomSheet extends StatelessWidget {
-  const CreateBloomSheet({super.key});
+  final ValueChanged<String>? onThought;
+  final ValueChanged<XFile>? onMedia;
+
+  const CreateBloomSheet({super.key, this.onThought, this.onMedia});
 
   @override
   Widget build(BuildContext context) {
@@ -584,18 +649,25 @@ class CreateBloomSheet extends StatelessWidget {
                   ),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: softText),
-                onTap: () {
+                onTap: () async {
+                  Navigator.pop(context);
+
                   if (item.$1 == 'Thought') {
-                    Navigator.pop(context);
-                    showDialog(
+                    final thought = await showDialog<String>(
                       context: context,
                       builder: (_) => const ThoughtDialog(),
                     );
+
+                    if (thought != null && thought.trim().isNotEmpty) {
+                      onThought?.call(thought.trim());
+                    }
                   } else if (item.$1 == 'Photo & Video') {
-                    Navigator.pop(context);
-                    _pickBloomMedia(context);
+                    final file = await _pickBloomMedia(context);
+
+                    if (file != null) {
+                      onMedia?.call(file);
+                    }
                   } else {
-                    Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('${item.$1} siap diaktifkan berikutnya.'),
@@ -613,9 +685,7 @@ class CreateBloomSheet extends StatelessWidget {
   }
 }
 
-
-
-Future<void> _pickBloomMedia(BuildContext context) async {
+Future<XFile?> _pickBloomMedia(BuildContext context) async {
   final picker = ImagePicker();
 
   final source = await showModalBottomSheet<ImageSource>(
@@ -638,14 +708,15 @@ Future<void> _pickBloomMedia(BuildContext context) async {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_library_outlined,
-                color: premiumBlue),
+            leading: const Icon(
+              Icons.photo_library_outlined,
+              color: premiumBlue,
+            ),
             title: const Text('Gallery'),
             onTap: () => Navigator.pop(context, ImageSource.gallery),
           ),
           ListTile(
-            leading:
-                const Icon(Icons.camera_alt_outlined, color: premiumBlue),
+            leading: const Icon(Icons.camera_alt_outlined, color: premiumBlue),
             title: const Text('Camera'),
             onTap: () => Navigator.pop(context, ImageSource.camera),
           ),
@@ -654,20 +725,13 @@ Future<void> _pickBloomMedia(BuildContext context) async {
     ),
   );
 
-  if (source == null) return;
+  if (source == null) return null;
 
-  final file = source == ImageSource.camera
-    ? await picker.pickImage(source: ImageSource.camera)
-    : await picker.pickMedia();
+  if (source == ImageSource.camera) {
+    return picker.pickImage(source: ImageSource.camera);
+  }
 
-  if (file == null || !context.mounted) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Media dipilih: ${file.name}'),
-      behavior: SnackBarBehavior.floating,
-    ),
-  );
+  return picker.pickMedia();
 }
 
 class ThoughtDialog extends StatefulWidget {
@@ -692,10 +756,7 @@ class _ThoughtDialogState extends State<ThoughtDialog> {
       backgroundColor: Colors.white,
       title: const Text(
         'What are you thinking?',
-        style: TextStyle(
-          color: navy,
-          fontWeight: FontWeight.w900,
-        ),
+        style: TextStyle(color: navy, fontWeight: FontWeight.w900),
       ),
       content: TextField(
         controller: controller,
@@ -714,15 +775,10 @@ class _ThoughtDialogState extends State<ThoughtDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Batal',
-            style: TextStyle(color: softText),
-          ),
+          child: const Text('Batal', style: TextStyle(color: softText)),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: premiumBlue,
-          ),
+          style: FilledButton.styleFrom(backgroundColor: premiumBlue),
           onPressed: () {
             if (controller.text.trim().isEmpty) return;
             Navigator.pop(context, controller.text.trim());
@@ -739,10 +795,10 @@ class CirclePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const _SimplePage(
-        icon: Icons.people,
-        title: 'Your Circle',
-        subtitle: 'Tempat untuk orang-orang yang berarti.',
-      );
+    icon: Icons.people,
+    title: 'Your Circle',
+    subtitle: 'Tempat untuk orang-orang yang berarti.',
+  );
 }
 
 class NotificationsPage extends StatelessWidget {
@@ -750,10 +806,10 @@ class NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const _SimplePage(
-        icon: Icons.notifications,
-        title: 'Alerts',
-        subtitle: 'Aktivitas terbaru di BLOOM.',
-      );
+    icon: Icons.notifications,
+    title: 'Alerts',
+    subtitle: 'Aktivitas terbaru di BLOOM.',
+  );
 }
 
 class ProfilePage extends StatelessWidget {
@@ -761,10 +817,10 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const _SimplePage(
-        icon: Icons.person,
-        title: 'Profile',
-        subtitle: 'Profil dan momen milikmu.',
-      );
+    icon: Icons.person,
+    title: 'Profile',
+    subtitle: 'Profil dan momen milikmu.',
+  );
 }
 
 class _SimplePage extends StatelessWidget {
@@ -802,17 +858,23 @@ class _SimplePage extends StatelessWidget {
               child: Icon(icon, color: premiumBlue, size: 30),
             ),
             const SizedBox(height: 18),
-            Text(title,
-                style: const TextStyle(
-                    color: navy,
-                    fontSize: 27,
-                    fontWeight: FontWeight.w900)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: navy,
+                fontSize: 27,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(subtitle,
-                style: const TextStyle(
-                    color: softText,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600)),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: softText,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
