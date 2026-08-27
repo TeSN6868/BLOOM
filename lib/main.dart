@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 const premiumBlue = Color(0xFFC56A4A);
 const lightBlue = Color(0xFFF8EDE8);
@@ -562,6 +563,9 @@ class CreateBloomSheet extends StatelessWidget {
                       context: context,
                       builder: (_) => const ThoughtDialog(),
                     );
+                  } else if (item.$1 == 'Photo & Video') {
+                    Navigator.pop(context);
+                    _pickBloomMedia(context);
                   } else {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -581,6 +585,60 @@ class CreateBloomSheet extends StatelessWidget {
   }
 }
 
+
+
+Future<void> _pickBloomMedia(BuildContext context) async {
+  final picker = ImagePicker();
+
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    backgroundColor: Colors.white,
+    showDragHandle: true,
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Choose Media',
+              style: TextStyle(
+                color: navy,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined,
+                color: premiumBlue),
+            title: const Text('Gallery'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.camera_alt_outlined, color: premiumBlue),
+            title: const Text('Camera'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (source == null) return;
+
+  final file = await picker.pickMedia(source: source);
+
+  if (file == null || !context.mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('Media dipilih: ${file.name}'),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
 
 class ThoughtDialog extends StatefulWidget {
   const ThoughtDialog({super.key});
