@@ -527,38 +527,10 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 ),
               ),
               const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () => showModalBottomSheet(
-                  context: context,
-                  showDragHandle: true,
-                  builder: (_) => CreateBloomSheet(
-                    onCreate:
-                        ({
-                          String text = '',
-                          XFile? image,
-                          XFile? video,
-                          String? location,
-                          String? voicePath,
-                          String? listening,
-                        }) async {
-                          await _addUnifiedBloom(
-                            text: text,
-                            image: image,
-                            video: video,
-                            location: location,
-                            voicePath: voicePath,
-                            listening: listening,
-                          );
-                        },
-                  ),
-                ),
-                child: const _PremiumCard(
-                  icon: Icons.add_rounded,
-                  title: 'Create a Bloom',
-                  subtitle: 'Bagikan sesuatu yang berarti hari ini',
-                ),
-              ),
+              const SizedBox(height: 14),
               const SizedBox(height: 26),
+              const _ActivityCard(),
+              const SizedBox(height: 18),
               const Text(
                 'Moments',
                 style: TextStyle(
@@ -615,80 +587,10 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 mood: 'Feeling grateful',
                 location: 'BLOOM',
               ),
-              const SizedBox(height: 20),
-              const _ActivityCard(),
             ]),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PremiumCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _PremiumCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .06),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 55,
-            height: 55,
-            decoration: BoxDecoration(
-              color: lightBlue,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(icon, color: premiumBlue, size: 29),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: navy,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: softText,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: softText),
-        ],
-      ),
     );
   }
 }
@@ -2165,24 +2067,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _tag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-      decoration: BoxDecoration(
-        color: lightBlue,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: navy,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final hasProfilePhoto =
@@ -2196,7 +2080,7 @@ class _ProfilePageState extends State<ProfilePage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 245,
+            expandedHeight: 340,
             pinned: true,
             backgroundColor: premiumBlue,
             foregroundColor: Colors.white,
@@ -2365,13 +2249,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         _stat(
                           value: '128',
-                          label: 'Bloomers',
-                          icon: Icons.spa_rounded,
+                          label: 'Roots',
+                          icon: Icons.people_alt_rounded,
                         ),
                         _stat(
                           value: '86',
-                          label: 'Aura',
-                          icon: Icons.auto_awesome_rounded,
+                          label: 'Branches',
+                          icon: Icons.account_tree_rounded,
                         ),
                       ],
                     ),
@@ -2419,41 +2303,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 const SizedBox(height: 7),
-
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(horizontal: 18),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Interests',
-                        style: TextStyle(
-                          color: navy,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 13),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _tag('Music'),
-                          _tag('Photography'),
-                          _tag('Travel'),
-                          _tag('Stories'),
-                          _tag('Nature'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
 
                 const SizedBox(height: 30),
               ],
