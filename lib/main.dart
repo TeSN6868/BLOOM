@@ -100,8 +100,26 @@ class _BloomShellState extends State<BloomShell> {
   }
 }
 
-class BloomHomePage extends StatelessWidget {
+class BloomHomePage extends StatefulWidget {
   const BloomHomePage({super.key});
+
+  @override
+  State<BloomHomePage> createState() => _BloomHomePageState();
+}
+
+class _BloomHomePageState extends State<BloomHomePage> {
+  String? newThought;
+
+  Future<void> createThought() async {
+    final thought = await showDialog<String>(
+      context: context,
+      builder: (_) => const ThoughtDialog(),
+    );
+
+    if (thought != null && thought.trim().isNotEmpty) {
+      setState(() => newThought = thought.trim());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +184,16 @@ class BloomHomePage extends StatelessWidget {
               const SizedBox(height: 14),
               const _StoryRow(),
               const SizedBox(height: 20),
+              if (newThought != null) ...[
+                _PostCard(
+                  name: 'Ayie',
+                  letter: 'A',
+                  text: newThought!,
+                  mood: 'Feeling thoughtful',
+                  location: 'BLOOM',
+                ),
+                const SizedBox(height: 16),
+              ],
               const _PostCard(
                 name: 'Ayie',
                 letter: 'A',
@@ -697,13 +725,7 @@ class _ThoughtDialogState extends State<ThoughtDialog> {
           ),
           onPressed: () {
             if (controller.text.trim().isEmpty) return;
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Thought berhasil dibuat.'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            Navigator.pop(context, controller.text.trim());
           },
           child: const Text('Bloom'),
         ),
