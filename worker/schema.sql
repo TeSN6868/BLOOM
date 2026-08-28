@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   bio TEXT DEFAULT '',
   photo_url TEXT DEFAULT '',
   background_url TEXT DEFAULT '',
+  pin_hash TEXT DEFAULT '',
   created_at INTEGER NOT NULL
 );
 

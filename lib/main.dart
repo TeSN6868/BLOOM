@@ -353,11 +353,116 @@ class BloomStore {
 class BloomApi {
   static const String baseUrl = 'https://bloom-api.coolalaga686.workers.dev';
 
-  static const String userId = 'ayie';
+  static Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString('bloom_user_id');
+    return id != null && id.trim().isNotEmpty;
+  }
+
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString('bloom_user_id');
+
+    if (id == null || id.trim().isEmpty) {
+      return null;
+    }
+
+    return id.trim();
+  }
+
+  static Future<String> requireUserId() async {
+    final id = await getUserId();
+
+    if (id == null || id.isEmpty) {
+      throw Exception('Sesi akun tidak ditemukan. Silakan login kembali.');
+    }
+
+    return id;
+  }
+
+  static Future<void> saveUserId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('bloom_user_id', id);
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('bloom_user_id');
+  }
+
+  static Future<Map<String, dynamic>> register({
+    required String username,
+    required String pin,
+    String name = '',
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/api/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'username': username.trim().toLowerCase(),
+            'pin': pin.trim(),
+            'name': name.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode != 201 || data['ok'] != true) {
+      throw Exception(
+        'Registrasi gagal: ${data['error'] ?? response.statusCode}',
+      );
+    }
+
+    final user = Map<String, dynamic>.from(data['user'] as Map);
+    final id = '${user['id'] ?? ''}'.trim();
+
+    if (id.isEmpty) {
+      throw Exception('Registrasi gagal: user ID kosong.');
+    }
+
+    await saveUserId(id);
+    return user;
+  }
+
+  static Future<Map<String, dynamic>> login({
+    required String username,
+    required String pin,
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/api/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'username': username.trim().toLowerCase(),
+            'pin': pin.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode != 200 || data['ok'] != true) {
+      throw Exception('Login gagal: ${data['error'] ?? response.statusCode}');
+    }
+
+    final user = Map<String, dynamic>.from(data['user'] as Map);
+    final id = '${user['id'] ?? ''}'.trim();
+
+    if (id.isEmpty) {
+      throw Exception('Login gagal: user ID kosong.');
+    }
+
+    await saveUserId(id);
+    return user;
+  }
 
   static Future<List<BloomPost>> loadPosts() async {
+    final currentUserId = await requireUserId();
+
     final uri = Uri.parse(
-      '$baseUrl/api/posts?user_id=${Uri.encodeQueryComponent(userId)}',
+      '$baseUrl/api/posts?user_id=${Uri.encodeQueryComponent(currentUserId)}',
     );
 
     final response = await http.get(uri).timeout(const Duration(seconds: 15));
@@ -406,6 +511,7 @@ class BloomApi {
     String mediaType = '',
   }) async {
     final now = DateTime.now();
+    final currentUserId = await requireUserId();
     final uri = Uri.parse('$baseUrl/api/posts');
 
     final response = await http
@@ -413,7 +519,7 @@ class BloomApi {
           uri,
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'user_id': userId,
+            'user_id': currentUserId,
             'text': text,
             'media_url': mediaUrl,
             'media_type': mediaType,
@@ -442,7 +548,9 @@ class BloomApi {
 
     return BloomPost(
       id: '${item['id'] ?? ''}',
-      name: 'Ayie',
+      name: '${item['name'] ?? ''}'.trim().isEmpty
+          ? 'BLOOM'
+          : '${item['name']}',
       text: '${item['text'] ?? text}',
       mood: '${item['activity'] ?? activity ?? 'New Bloom'}',
       location: '${item['location'] ?? location ?? 'BLOOM'}',
@@ -488,7 +596,9 @@ class BloomApi {
 
     return BloomPost(
       id: '${item['id'] ?? id}',
-      name: 'Ayie',
+      name: '${item['name'] ?? ''}'.trim().isEmpty
+          ? 'BLOOM'
+          : '${item['name']}',
       text: '${item['text'] ?? text}',
       mood: '${item['activity'] ?? activity ?? 'New Bloom'}',
       location: '${item['location'] ?? location ?? 'BLOOM'}',
@@ -534,7 +644,560 @@ class BloomApp extends StatelessWidget {
           displayColor: navy,
         ),
       ),
-      home: const BloomShell(),
+      home: const BloomAuthGate(),
+    );
+  }
+}
+
+class BloomAuthGate extends StatefulWidget {
+  const BloomAuthGate({super.key});
+
+  @override
+  State<BloomAuthGate> createState() => _BloomAuthGateState();
+}
+
+class _BloomAuthGateState extends State<BloomAuthGate> {
+  bool loading = true;
+  bool loggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    final active = await BloomApi.isLoggedIn();
+
+    if (!mounted) return;
+
+    setState(() {
+      loggedIn = active;
+      loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (loggedIn) {
+      return const BloomShell();
+    }
+
+    return BloomLoginPage(
+      onLoggedIn: () {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BloomShell()),
+        );
+      },
+    );
+  }
+}
+
+class BloomLoginPage extends StatefulWidget {
+  final VoidCallback onLoggedIn;
+
+  const BloomLoginPage({super.key, required this.onLoggedIn});
+
+  @override
+  State<BloomLoginPage> createState() => _BloomLoginPageState();
+}
+
+class _BloomLoginPageState extends State<BloomLoginPage> {
+  final usernameController = TextEditingController();
+  final pinController = TextEditingController();
+
+  bool loading = false;
+  bool obscurePin = true;
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    pinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    final username = usernameController.text.trim();
+    final pin = pinController.text.trim();
+
+    if (username.isEmpty) {
+      _message('Username wajib diisi.');
+      return;
+    }
+
+    if (!RegExp(r'^\d{6}$').hasMatch(pin)) {
+      _message('PIN harus terdiri dari 6 angka.');
+      return;
+    }
+
+    setState(() {
+      loading = true;
+    });
+
+    try {
+      await BloomApi.login(username: username, pin: pin);
+
+      if (!mounted) return;
+
+      widget.onLoggedIn();
+    } catch (e) {
+      if (!mounted) return;
+
+      _message(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  void _openRegister() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BloomRegisterPage(
+          onRegistered: (username, pin) async {
+            usernameController.text = username;
+            pinController.text = pin;
+
+            if (!mounted) return;
+
+            Navigator.of(context).pop();
+
+            await _login();
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: pageBg,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Column(
+                children: [
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: premiumBlue,
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.local_florist_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  const Text(
+                    'BLOOM',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 3,
+                      color: navy,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Masuk ke akun BLOOM',
+                    style: TextStyle(color: softText, fontSize: 15),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  TextField(
+                    controller: usernameController,
+                    textInputAction: TextInputAction.next,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  TextField(
+                    controller: pinController,
+                    keyboardType: TextInputType.number,
+                    obscureText: obscurePin,
+                    maxLength: 6,
+                    onSubmitted: (_) => _login(),
+                    decoration: InputDecoration(
+                      labelText: 'PIN 6 digit',
+                      counterText: '',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            obscurePin = !obscurePin;
+                          });
+                        },
+                        icon: Icon(
+                          obscurePin
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: loading ? null : _login,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: premiumBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'MASUK',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  TextButton(
+                    onPressed: loading ? null : _openRegister,
+                    child: const Text(
+                      'Belum punya akun? Buat Akun',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: navy,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BloomRegisterPage extends StatefulWidget {
+  final Future<void> Function(String username, String pin) onRegistered;
+
+  const BloomRegisterPage({super.key, required this.onRegistered});
+
+  @override
+  State<BloomRegisterPage> createState() => _BloomRegisterPageState();
+}
+
+class _BloomRegisterPageState extends State<BloomRegisterPage> {
+  final nameController = TextEditingController();
+  final usernameController = TextEditingController();
+  final pinController = TextEditingController();
+  final confirmPinController = TextEditingController();
+
+  bool loading = false;
+  bool obscurePin = true;
+  bool obscureConfirm = true;
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    usernameController.dispose();
+    pinController.dispose();
+    confirmPinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _register() async {
+    final name = nameController.text.trim();
+    final username = usernameController.text.trim().toLowerCase();
+    final pin = pinController.text.trim();
+    final confirm = confirmPinController.text.trim();
+
+    if (name.isEmpty) {
+      _message('Nama wajib diisi.');
+      return;
+    }
+
+    if (!RegExp(r'^[a-z0-9_.]{3,30}$').hasMatch(username)) {
+      _message(
+        'Username 3-30 karakter: huruf kecil, angka, titik atau garis bawah.',
+      );
+      return;
+    }
+
+    if (!RegExp(r'^\d{6}$').hasMatch(pin)) {
+      _message('PIN harus terdiri dari 6 angka.');
+      return;
+    }
+
+    if (pin != confirm) {
+      _message('Konfirmasi PIN tidak sama.');
+      return;
+    }
+
+    setState(() {
+      loading = true;
+    });
+
+    try {
+      await BloomApi.register(name: name, username: username, pin: pin);
+
+      if (!mounted) return;
+
+      await widget.onRegistered(username, pin);
+    } catch (e) {
+      if (!mounted) return;
+
+      _message(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  InputDecoration _decoration(
+    String label,
+    IconData icon, {
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: pageBg,
+      appBar: AppBar(
+        backgroundColor: pageBg,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: loading ? null : () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text(
+          'Buat Akun',
+          style: TextStyle(fontWeight: FontWeight.w800, color: navy),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(28, 12, 28, 32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Buat akun BLOOM baru',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: navy,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Akun akan tersimpan di cloud BLOOM.',
+                    style: TextStyle(color: softText, fontSize: 14),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                TextField(
+                  controller: nameController,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  decoration: _decoration('Nama', Icons.badge_outlined),
+                ),
+
+                const SizedBox(height: 14),
+
+                TextField(
+                  controller: usernameController,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.next,
+                  decoration: _decoration(
+                    'Username',
+                    Icons.alternate_email_rounded,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                TextField(
+                  controller: pinController,
+                  keyboardType: TextInputType.number,
+                  obscureText: obscurePin,
+                  maxLength: 6,
+                  textInputAction: TextInputAction.next,
+                  decoration: _decoration(
+                    'PIN 6 digit',
+                    Icons.lock_outline_rounded,
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          obscurePin = !obscurePin;
+                        });
+                      },
+                      icon: Icon(
+                        obscurePin
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                    ),
+                  ).copyWith(counterText: ''),
+                ),
+
+                const SizedBox(height: 14),
+
+                TextField(
+                  controller: confirmPinController,
+                  keyboardType: TextInputType.number,
+                  obscureText: obscureConfirm,
+                  maxLength: 6,
+                  onSubmitted: (_) => _register(),
+                  decoration: _decoration(
+                    'Konfirmasi PIN',
+                    Icons.verified_user_outlined,
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          obscureConfirm = !obscureConfirm;
+                        });
+                      },
+                      icon: Icon(
+                        obscureConfirm
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                    ),
+                  ).copyWith(counterText: ''),
+                ),
+
+                const SizedBox(height: 22),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton(
+                    onPressed: loading ? null : _register,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: premiumBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: loading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'DAFTAR AKUN',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                TextButton(
+                  onPressed: loading ? null : () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'Sudah punya akun? Masuk',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: navy),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -3019,6 +3682,91 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadProfile();
   }
 
+  Future<void> _loadCloudProfile() async {
+    try {
+      final userId = await BloomApi.requireUserId();
+
+      final response = await http.get(
+        Uri.parse(
+          '${BloomApi.baseUrl}/api/profile?user_id=${Uri.encodeQueryComponent(userId)}',
+        ),
+      );
+
+      if (response.statusCode != 200) return;
+
+      final data = jsonDecode(response.body);
+      if (data is! Map || data['ok'] != true) return;
+
+      final user = data['user'];
+      if (user is! Map) return;
+
+      final prefs = await SharedPreferences.getInstance();
+
+      final cloudName = '${user['name'] ?? ''}'.trim();
+      final cloudUsername = '${user['username'] ?? ''}'.trim();
+      final cloudBio = '${user['bio'] ?? ''}';
+      final cloudPhoto = '${user['photo_url'] ?? ''}'.trim();
+      final cloudBackground = '${user['background_url'] ?? ''}'.trim();
+
+      if (cloudName.isNotEmpty) {
+        await prefs.setString(_nameKey, cloudName);
+      }
+
+      if (cloudUsername.isNotEmpty) {
+        await prefs.setString(_usernameKey, cloudUsername);
+      }
+
+      await prefs.setString(_bioKey, cloudBio);
+
+      if (cloudPhoto.isNotEmpty) {
+        await prefs.setString(_profilePhotoKey, cloudPhoto);
+      }
+
+      if (cloudBackground.isNotEmpty) {
+        await prefs.setString(_backgroundPhotoKey, cloudBackground);
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        if (cloudName.isNotEmpty) name = cloudName;
+        if (cloudUsername.isNotEmpty) username = cloudUsername;
+        bio = cloudBio;
+
+        if (cloudPhoto.isNotEmpty) {
+          profilePhotoPath = cloudPhoto;
+        }
+
+        if (cloudBackground.isNotEmpty) {
+          backgroundPhotoPath = cloudBackground;
+        }
+      });
+    } catch (e) {
+      debugPrint('[BLOOM PROFILE] Cloud load failed: $e');
+    }
+  }
+
+  Future<void> _saveCloudProfile() async {
+    try {
+      final userId = await BloomApi.requireUserId();
+
+      await http.put(
+        Uri.parse('${BloomApi.baseUrl}/api/profile'),
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'name': name,
+          'username': username,
+          'bio': bio,
+          'photo_url': profilePhotoPath ?? '',
+          'background_url': backgroundPhotoPath ?? '',
+        }),
+      );
+    } catch (e) {
+      debugPrint('[BLOOM PROFILE] Cloud save failed: $e');
+    }
+  }
+
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -3033,24 +3781,65 @@ class _ProfilePageState extends State<ProfilePage> {
       profilePhotoPath = prefs.getString(_profilePhotoKey);
       backgroundPhotoPath = prefs.getString(_backgroundPhotoKey);
     });
+
+    await _loadCloudProfile();
   }
 
-  Future<String> _savePhoto(XFile file, String prefix) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final folder = Directory('${dir.path}/bloom_profile');
+  Future<String?> _uploadProfileMedia(XFile file, String type) async {
+    try {
+      final userId = await BloomApi.getUserId();
 
-    if (!await folder.exists()) {
-      await folder.create(recursive: true);
+      if (userId == null || userId.isEmpty) {
+        debugPrint('[BLOOM R2] User ID belum tersedia.');
+        return null;
+      }
+
+      final bytes = await file.readAsBytes();
+
+      final contentType = switch (file.path.toLowerCase()) {
+        final p when p.endsWith('.png') => 'image/png',
+        final p when p.endsWith('.webp') => 'image/webp',
+        _ => 'image/jpeg',
+      };
+
+      final uri = Uri.parse(
+        '${BloomApi.baseUrl}/api/media'
+        '?user_id=${Uri.encodeQueryComponent(userId)}'
+        '&type=${Uri.encodeQueryComponent(type)}',
+      );
+
+      final response = await http
+          .put(uri, headers: {'content-type': contentType}, body: bytes)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+        debugPrint(
+          '[BLOOM R2] Upload gagal: '
+          '${response.statusCode} ${response.body}',
+        );
+        return null;
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data is! Map || data['ok'] != true) {
+        debugPrint('[BLOOM R2] Response tidak valid.');
+        return null;
+      }
+
+      final url = '${data['url'] ?? ''}'.trim();
+
+      if (url.isEmpty) {
+        debugPrint('[BLOOM R2] URL media kosong.');
+        return null;
+      }
+
+      debugPrint('[BLOOM R2] Upload berhasil: $url');
+      return url;
+    } catch (e) {
+      debugPrint('[BLOOM R2] Upload error: $e');
+      return null;
     }
-
-    final extension = file.path.contains('.')
-        ? file.path.split('.').last
-        : 'jpg';
-
-    final path =
-        '${folder.path}/${prefix}_${DateTime.now().microsecondsSinceEpoch}.$extension';
-
-    return (await File(file.path).copy(path)).path;
   }
 
   Future<void> _pickProfilePhoto() async {
@@ -3058,16 +3847,29 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (file == null) return;
 
-    final path = await _savePhoto(file, 'profile');
-    final prefs = await SharedPreferences.getInstance();
+    final cloudUrl = await _uploadProfileMedia(file, 'profile');
 
-    await prefs.setString(_profilePhotoKey, path);
+    if (cloudUrl == null || cloudUrl.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto profil gagal diunggah ke server.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_profilePhotoKey, cloudUrl);
 
     if (!mounted) return;
 
     setState(() {
-      profilePhotoPath = path;
+      profilePhotoPath = cloudUrl;
     });
+
+    await _saveCloudProfile();
   }
 
   Future<void> _pickBackgroundPhoto() async {
@@ -3075,16 +3877,27 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (file == null) return;
 
-    final path = await _savePhoto(file, 'background');
-    final prefs = await SharedPreferences.getInstance();
+    final cloudUrl = await _uploadProfileMedia(file, 'background');
 
-    await prefs.setString(_backgroundPhotoKey, path);
+    if (cloudUrl == null || cloudUrl.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Background gagal diunggah ke server.')),
+        );
+      }
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_backgroundPhotoKey, cloudUrl);
 
     if (!mounted) return;
 
     setState(() {
-      backgroundPhotoPath = path;
+      backgroundPhotoPath = cloudUrl;
     });
+
+    await _saveCloudProfile();
   }
 
   Future<void> _editProfileInfo() async {
@@ -3398,10 +4211,10 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final hasProfilePhoto =
-        profilePhotoPath != null && File(profilePhotoPath!).existsSync();
+        profilePhotoPath != null && profilePhotoPath!.trim().isNotEmpty;
 
     final hasBackground =
-        backgroundPhotoPath != null && File(backgroundPhotoPath!).existsSync();
+        backgroundPhotoPath != null && backgroundPhotoPath!.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -3425,7 +4238,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 fit: StackFit.expand,
                 children: [
                   if (hasBackground)
-                    Image.file(File(backgroundPhotoPath!), fit: BoxFit.cover)
+                    backgroundPhotoPath!.startsWith('http')
+                        ? Image.network(backgroundPhotoPath!, fit: BoxFit.cover)
+                        : Image.file(
+                            File(backgroundPhotoPath!),
+                            fit: BoxFit.cover,
+                          )
                   else
                     const DecoratedBox(
                       decoration: BoxDecoration(
@@ -3497,12 +4315,19 @@ class _ProfilePageState extends State<ProfilePage> {
                             height: 116,
                             child: ClipOval(
                               child: hasProfilePhoto
-                                  ? Image.file(
-                                      File(profilePhotoPath!),
-                                      width: 116,
-                                      height: 116,
-                                      fit: BoxFit.cover,
-                                    )
+                                  ? profilePhotoPath!.startsWith('http')
+                                        ? Image.network(
+                                            profilePhotoPath!,
+                                            width: 116,
+                                            height: 116,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Image.file(
+                                            File(profilePhotoPath!),
+                                            width: 116,
+                                            height: 116,
+                                            fit: BoxFit.cover,
+                                          )
                                   : Container(
                                       color: lightBlue,
                                       child: const Icon(

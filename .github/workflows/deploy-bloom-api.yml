@@ -27,7 +27,7 @@ jobs:
           set -e
           wrangler whoami
 
-      - name: Check R2 buckets
+      - name: Check and prepare R2 bucket
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -35,6 +35,13 @@ jobs:
           set -e
           echo "===== R2 BUCKETS ====="
           wrangler r2 bucket list
+
+          if wrangler r2 bucket list | grep -q "bloom-media"; then
+            echo "bloom-media sudah ada."
+          else
+            echo "Membuat bucket bloom-media..."
+            wrangler r2 bucket create bloom-media
+          fi
 
       - name: Get or create D1 database
         env:
@@ -91,6 +98,7 @@ jobs:
             "name": "bloom-api",
             "main": "worker/index.js",
             "compatibility_date": "2026-08-28",
+            "r2_buckets": [{"binding": "MEDIA", "bucket_name": "bloom-media"}],
             "d1_databases": [
               {
                 "binding": "DB",
