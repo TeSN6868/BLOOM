@@ -474,44 +474,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
   List<BloomPost> posts = [];
   XFile? newMedia;
 
-  bool _searching = false;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  List<BloomPost> get _filteredPosts {
-    final query = _searchQuery.trim().toLowerCase();
-
-    if (query.isEmpty) return posts;
-
-    return posts.where((post) {
-      return post.name.toLowerCase().contains(query) ||
-          post.text.toLowerCase().contains(query) ||
-          post.mood.toLowerCase().contains(query) ||
-          post.location.toLowerCase().contains(query);
-    }).toList();
-  }
-
-  void _openSearch() {
-    setState(() {
-      _searching = true;
-    });
-  }
-
-  void _closeSearch() {
-    _searchController.clear();
-
-    setState(() {
-      _searching = false;
-      _searchQuery = '';
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -784,46 +746,21 @@ class _BloomHomePageState extends State<BloomHomePage> {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        SliverAppBar(
+        const SliverAppBar(
           pinned: true,
           backgroundColor: Colors.white,
-          title: _searching
-              ? TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                  style: const TextStyle(
-                    color: navy,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Cari Moment...',
-                    border: InputBorder.none,
-                  ),
-                )
-              : const Text(
-                  'BLOOM',
-                  style: TextStyle(
-                    color: premiumBlue,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-                  ),
-                ),
-          actions: [
-            IconButton(
-              tooltip: _searching ? 'Tutup pencarian' : 'Cari Moment',
-              onPressed: _searching ? _closeSearch : _openSearch,
-              icon: Icon(
-                _searching ? Icons.close_rounded : Icons.search_rounded,
-                color: navy,
-              ),
+          title: Text(
+            'BLOOM',
+            style: TextStyle(
+              color: premiumBlue,
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
             ),
-            const SizedBox(width: 6),
+          ),
+          actions: [
+            Icon(Icons.search_rounded, color: navy),
+            SizedBox(width: 18),
           ],
         ),
         SliverPadding(
@@ -859,49 +796,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
               const SizedBox(height: 14),
               const _StoryRow(),
               const SizedBox(height: 20),
-              if (_searching && _searchQuery.trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: Text(
-                    '${_filteredPosts.length} Moment ditemukan',
-                    style: const TextStyle(
-                      color: softText,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              if (_searching &&
-                  _searchQuery.trim().isNotEmpty &&
-                  _filteredPosts.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.search_off_rounded,
-                          size: 48,
-                          color: softText,
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Moment tidak ditemukan',
-                          style: TextStyle(
-                            color: navy,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Coba kata kunci lain.',
-                          style: TextStyle(color: softText),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ..._filteredPosts.map(
+              ...posts.map(
                 (post) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _PostCard(
@@ -1537,7 +1432,9 @@ Future<String?> getBloomLocation() async {
     }
 
     final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
     );
 
     String placeName = '';
@@ -1555,7 +1452,8 @@ Future<String?> getBloomLocation() async {
         final parts = <String>[
           if ((p.name ?? '').trim().isNotEmpty) p.name!.trim(),
           if ((p.street ?? '').trim().isNotEmpty) p.street!.trim(),
-          if ((p.subLocality ?? '').trim().isNotEmpty) p.subLocality!.trim(),
+          if ((p.subLocality ?? '').trim().isNotEmpty)
+            p.subLocality!.trim(),
           if ((p.locality ?? '').trim().isNotEmpty) p.locality!.trim(),
           if ((p.subAdministrativeArea ?? '').trim().isNotEmpty)
             p.subAdministrativeArea!.trim(),
@@ -1586,7 +1484,9 @@ Future<String?> getBloomLocation() async {
 class _BloomLocationMap extends StatelessWidget {
   final String location;
 
-  const _BloomLocationMap({required this.location});
+  const _BloomLocationMap({
+    required this.location,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1612,10 +1512,14 @@ class _BloomLocationMap extends StatelessWidget {
       child: SizedBox(
         height: 190,
         child: FlutterMap(
-          options: MapOptions(initialCenter: point, initialZoom: 16),
+          options: MapOptions(
+            initialCenter: point,
+            initialZoom: 16,
+          ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate:
+                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.bloom.app',
             ),
             MarkerLayer(
@@ -1650,6 +1554,7 @@ class _BloomLocationMap extends StatelessWidget {
     );
   }
 }
+
 
 class BloomVoiceRecorder {
   final AudioRecorder recorder = AudioRecorder();
