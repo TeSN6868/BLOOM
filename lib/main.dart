@@ -235,6 +235,83 @@ class BloomPost {
   }
 }
 
+
+class BloomComment {
+  final String id;
+  final String postId;
+  final String username;
+  final String text;
+  final DateTime createdAt;
+
+  const BloomComment({
+    required this.id,
+    required this.postId,
+    required this.username,
+    required this.text,
+    required this.createdAt,
+  });
+
+  String encode() {
+    return [
+      id,
+      postId,
+      username.replaceAll('|', ' '),
+      text.replaceAll('|', ' '),
+      createdAt.millisecondsSinceEpoch.toString(),
+    ].join('|');
+  }
+
+  static BloomComment? decode(String value) {
+    final parts = value.split('|');
+    if (parts.length < 5) return null;
+
+    return BloomComment(
+      id: parts[0],
+      postId: parts[1],
+      username: parts[2],
+      text: parts[3],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        int.tryParse(parts[4]) ?? 0,
+      ),
+    );
+  }
+}
+
+class BloomCommentStore {
+  static const _commentsKey = 'bloom_comments_v1';
+
+  static Future<List<BloomComment>> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_commentsKey) ?? [];
+
+    return raw
+        .map(BloomComment.decode)
+        .whereType<BloomComment>()
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  static Future<void> save(List<BloomComment> comments) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(
+      _commentsKey,
+      comments.map((comment) => comment.encode()).toList(),
+    );
+  }
+
+  static Future<List<BloomComment>> forPost(String postId) async {
+    final comments = await load();
+    return comments.where((comment) => comment.postId == postId).toList();
+  }
+
+  static Future<void> add(BloomComment comment) async {
+    final comments = await load();
+    comments.add(comment);
+    await save(comments);
+  }
+}
+
 class BloomStore {
   static const _postsKey = 'bloom_posts_v1';
 
@@ -1600,63 +1677,151 @@ Future<void> _showBloomComments(
     showDragHandle: true,
     backgroundColor: Colors.white,
     builder: (sheetContext) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 18,
-          right: 18,
-          top: 8,
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 18,
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Komentar',
-                style: TextStyle(
-                  color: navy,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                maxLines: 4,
-                minLines: 1,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: 'Tulis komentar...',
-                  filled: true,
-                  fillColor: lightBlue,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    final text = controller.text.trim();
-                    if (text.isEmpty) return;
+      return FutureBuilder<List<BloomComment>>(
+        future: BloomCommentStore.forPost(postId),
+        builder: (context, snapshot) {
+          final comments = snapshot.data ?? [];
 
-                    Navigator.of(sheetContext).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Komentar ditambahkan.')),
-                    );
-                  },
-                  icon: const Icon(Icons.send_rounded),
-                  label: const Text('Kirim Komentar'),
-                ),
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 18,
+              right: 18,
+              top: 8,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 18,
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Komentar',
+                    style: TextStyle(
+                      color: navy,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (comments.isNotEmpty)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 260),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: comments.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (_, index) {
+                          final comment = comments[index];
+
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: lightBlue,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '@${comment.username}',
+                                  style: const TextStyle(
+                                    color: navy,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  comment.text,
+                                  style: const TextStyle(
+                                    color: navy,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        'Belum ada komentar.',
+                        style: TextStyle(color: softText),
+                      ),
+                    ),
+
+                  const SizedBox(height: 10),
+
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    maxLines: 4,
+                    minLines: 1,
+                    textInputAction: TextInputAction.newline,
+                    decoration: InputDecoration(
+                      hintText: 'Tulis komentar...',
+                      filled: true,
+                      fillColor: lightBlue,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        final text = controller.text.trim();
+                        if (text.isEmpty) return;
+
+                        final prefs =
+                            await SharedPreferences.getInstance();
+
+                        final username =
+                            prefs.getString('bloom_profile_username') ??
+                                'ayie';
+
+                        final comment = BloomComment(
+                          id: DateTime.now()
+                              .microsecondsSinceEpoch
+                              .toString(),
+                          postId: postId,
+                          username: username,
+                          text: text,
+                          createdAt: DateTime.now(),
+                        );
+
+                        await BloomCommentStore.add(comment);
+
+                        if (!sheetContext.mounted) return;
+
+                        Navigator.of(sheetContext).pop();
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Komentar berhasil dikirim.'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.send_rounded),
+                      label: const Text('Kirim Komentar'),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     },
   );
