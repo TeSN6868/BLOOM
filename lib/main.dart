@@ -8,6 +8,8 @@ import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 const premiumBlue = Color(0xFFC56A4A);
 const lightBlue = Color(0xFFF8EDE8);
@@ -171,6 +173,113 @@ class BloomStore {
     final posts = await loadPosts();
     posts.removeWhere((post) => post.id == id);
     await savePosts(posts);
+  }
+}
+
+
+class BloomApi {
+  static const String baseUrl =
+      'https://bloom-api.coolalaga686.workers.dev';
+
+  static const String userId = 'ayie';
+
+  static Future<List<BloomPost>> loadPosts() async {
+    final uri = Uri.parse(
+      '$baseUrl/api/posts?user_id=${Uri.encodeQueryComponent(userId)}',
+    );
+
+    final response = await http.get(uri).timeout(
+      const Duration(seconds: 15),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal mengambil Moments: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body);
+
+    if (data['ok'] != true) {
+      throw Exception('API menolak permintaan.');
+    }
+
+    final rawPosts = data['posts'];
+
+    if (rawPosts is! List) {
+      return [];
+    }
+
+    return rawPosts.map<BloomPost>((item) {
+      final createdAt = DateTime.fromMillisecondsSinceEpoch(
+        int.tryParse('${item['created_at'] ?? 0}') ?? 0,
+      );
+
+      return BloomPost(
+        id: '${item['id'] ?? ''}',
+        name: 'Ayie',
+        text: '${item['text'] ?? ''}',
+        mood: 'New Bloom',
+        location: 'BLOOM',
+        createdAt: createdAt,
+      );
+    }).toList();
+  }
+
+  static Future<BloomPost> createPost({
+    required String text,
+  }) async {
+    final now = DateTime.now();
+    final uri = Uri.parse('$baseUrl/api/posts');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'user_id': userId,
+        'text': text,
+        'media_url': '',
+        'media_type': '',
+      }),
+    ).timeout(
+      const Duration(seconds: 15),
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception('Gagal membuat Moment: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body);
+
+    if (data['ok'] != true || data['post'] == null) {
+      throw Exception('API gagal membuat Moment.');
+    }
+
+    final item = data['post'];
+
+    return BloomPost(
+      id: '${item['id']}',
+      name: 'Ayie',
+      text: '${item['text'] ?? text}',
+      mood: 'Feeling thoughtful',
+      location: 'BLOOM',
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        int.tryParse('${item['created_at'] ?? now.millisecondsSinceEpoch}') ??
+            now.millisecondsSinceEpoch,
+      ),
+    );
+  }
+
+  static Future<void> deletePost(String id) async {
+    final uri = Uri.parse('$baseUrl/api/posts/${Uri.encodeComponent(id)}');
+
+    final response = await http.delete(uri).timeout(
+      const Duration(seconds: 15),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal menghapus Moment: ${response.statusCode}');
+    }
   }
 }
 
