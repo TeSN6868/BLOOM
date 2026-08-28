@@ -1095,6 +1095,8 @@ class _BloomHomePageState extends State<BloomHomePage> {
                       post.bookmarked = value;
                       await BloomStore.updatePost(post);
                     },
+                    onComment: () =>
+                        _showBloomComments(context, postId: post.id),
                   ),
                 ),
               ),
@@ -1218,6 +1220,7 @@ class _PostCard extends StatefulWidget {
   final VoidCallback? onDelete;
   final ValueChanged<bool>? onLikeChanged;
   final ValueChanged<bool>? onBookmarkChanged;
+  final VoidCallback? onComment;
 
   const _PostCard({
     required this.name,
@@ -1236,6 +1239,7 @@ class _PostCard extends StatefulWidget {
     this.onDelete,
     this.onLikeChanged,
     this.onBookmarkChanged,
+    this.onComment,
   });
 
   @override
@@ -1558,8 +1562,12 @@ class _PostCardState extends State<_PostCard> {
                   color: liked ? premiumBlue : softText,
                 ),
               ),
-              const Icon(Icons.chat_bubble_outline, color: softText),
-              const SizedBox(width: 20),
+              IconButton(
+                onPressed: widget.onComment,
+                tooltip: 'Komentar',
+                icon: const Icon(Icons.chat_bubble_outline, color: softText),
+              ),
+              const SizedBox(width: 4),
               const Icon(Icons.ios_share, color: softText),
               const Spacer(),
               IconButton(
@@ -1578,6 +1586,82 @@ class _PostCardState extends State<_PostCard> {
       ),
     );
   }
+}
+
+Future<void> _showBloomComments(
+  BuildContext context, {
+  required String postId,
+}) async {
+  final controller = TextEditingController();
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    builder: (sheetContext) {
+      return Padding(
+        padding: EdgeInsets.only(
+          left: 18,
+          right: 18,
+          top: 8,
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 18,
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Komentar',
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLines: 4,
+                minLines: 1,
+                textInputAction: TextInputAction.newline,
+                decoration: InputDecoration(
+                  hintText: 'Tulis komentar...',
+                  filled: true,
+                  fillColor: lightBlue,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    final text = controller.text.trim();
+                    if (text.isEmpty) return;
+
+                    Navigator.of(sheetContext).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Komentar ditambahkan.')),
+                    );
+                  },
+                  icon: const Icon(Icons.send_rounded),
+                  label: const Text('Kirim Komentar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  controller.dispose();
 }
 
 class _Pill extends StatelessWidget {
