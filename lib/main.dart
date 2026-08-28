@@ -235,7 +235,6 @@ class BloomPost {
   }
 }
 
-
 class BloomComment {
   final String id;
   final String postId;
@@ -284,10 +283,7 @@ class BloomCommentStore {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_commentsKey) ?? [];
 
-    return raw
-        .map(BloomComment.decode)
-        .whereType<BloomComment>()
-        .toList()
+    return raw.map(BloomComment.decode).whereType<BloomComment>().toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
@@ -1714,8 +1710,7 @@ Future<void> _showBloomComments(
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: comments.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (_, index) {
                           final comment = comments[index];
 
@@ -1786,17 +1781,13 @@ Future<void> _showBloomComments(
                         final text = controller.text.trim();
                         if (text.isEmpty) return;
 
-                        final prefs =
-                            await SharedPreferences.getInstance();
+                        final prefs = await SharedPreferences.getInstance();
 
                         final username =
-                            prefs.getString('bloom_profile_username') ??
-                                'ayie';
+                            prefs.getString('bloom_profile_username') ?? 'ayie';
 
                         final comment = BloomComment(
-                          id: DateTime.now()
-                              .microsecondsSinceEpoch
-                              .toString(),
+                          id: DateTime.now().microsecondsSinceEpoch.toString(),
                           postId: postId,
                           username: username,
                           text: text,
@@ -3312,22 +3303,26 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ],
                           ),
-                          child: ClipOval(
-                            child: hasProfilePhoto
-                                ? Image.file(
-                                    File(profilePhotoPath!),
-                                    width: 116,
-                                    height: 116,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    color: lightBlue,
-                                    child: const Icon(
-                                      Icons.person_rounded,
-                                      color: premiumBlue,
-                                      size: 64,
+                          child: SizedBox(
+                            width: 116,
+                            height: 116,
+                            child: ClipOval(
+                              child: hasProfilePhoto
+                                  ? Image.file(
+                                      File(profilePhotoPath!),
+                                      width: 116,
+                                      height: 116,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      color: lightBlue,
+                                      child: const Icon(
+                                        Icons.person_rounded,
+                                        color: premiumBlue,
+                                        size: 64,
+                                      ),
                                     ),
-                                  ),
+                            ),
                           ),
                         ),
                       ),
