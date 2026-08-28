@@ -1185,6 +1185,8 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 mood: 'Feeling peaceful',
                 location: 'Bandung',
                 createdAt: DateTime(2026, 8, 28, 9, 0),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-ayie'),
               ),
               const SizedBox(height: 16),
               _PostCard(
@@ -1195,6 +1197,8 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 mood: 'Feeling grateful',
                 location: 'BLOOM',
                 createdAt: DateTime(2026, 8, 28, 8, 30),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-bloom'),
               ),
             ]),
           ),
