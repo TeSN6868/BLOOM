@@ -24,6 +24,8 @@ export default {
           text,
           media_url,
           media_type,
+          location,
+          activity,
           created_at,
           updated_at
         FROM posts
@@ -44,6 +46,8 @@ export default {
       const text = String(body.text ?? "");
       const mediaUrl = String(body.media_url ?? "");
       const mediaType = String(body.media_type ?? "");
+      const location = String(body.location ?? "");
+      const activity = String(body.activity ?? "");
 
       if (!userId) {
         return json({ ok: false, error: "user_id_required" }, 400);
@@ -59,6 +63,8 @@ export default {
           text,
           media_url,
           media_type,
+          location,
+          activity,
           created_at,
           updated_at
         )
@@ -69,6 +75,8 @@ export default {
         text,
         mediaUrl,
         mediaType,
+        location,
+        activity,
         now,
         now
       ).run();
@@ -81,10 +89,74 @@ export default {
           text,
           media_url: mediaUrl,
           media_type: mediaType,
+          location,
+          activity,
           created_at: now,
           updated_at: now
         }
       }, 201);
+    }
+
+    if (request.method === "PUT" && url.pathname.startsWith("/api/posts/")) {
+      const id = url.pathname.split("/").pop();
+
+      if (!id) {
+        return json({ ok: false, error: "id_required" }, 400);
+      }
+
+      const body = await request.json();
+
+      const text = String(body.text ?? "");
+      const location = String(body.location ?? "");
+      const activity = String(body.activity ?? "");
+      const mediaUrl = String(body.media_url ?? "");
+      const mediaType = String(body.media_type ?? "");
+      const now = Date.now();
+
+      await env.DB.prepare(`
+        UPDATE posts
+        SET
+          text = ?,
+          location = ?,
+          activity = ?,
+          media_url = ?,
+          media_type = ?,
+          updated_at = ?
+        WHERE id = ?
+      `).bind(
+        text,
+        location,
+        activity,
+        mediaUrl,
+        mediaType,
+        now,
+        id
+      ).run();
+
+      const result = await env.DB.prepare(`
+        SELECT
+          id,
+          user_id,
+          text,
+          media_url,
+          media_type,
+          location,
+          activity,
+          created_at,
+          updated_at
+        FROM posts
+        WHERE id = ?
+        LIMIT 1
+      `).bind(id).first();
+
+      if (!result) {
+        return json({ ok: false, error: "post_not_found" }, 404);
+      }
+
+      return json({
+        ok: true,
+        post: result
+      });
     }
 
     if (request.method === "DELETE" && url.pathname.startsWith("/api/posts/")) {

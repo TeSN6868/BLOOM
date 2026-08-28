@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -49,6 +52,7 @@ class BloomPost {
   });
 
   BloomPost copyWith({
+    String? id,
     String? text,
     String? mood,
     String? location,
@@ -56,11 +60,12 @@ class BloomPost {
     String? videoPath,
     String? voicePath,
     String? listening,
+    DateTime? createdAt,
     bool? liked,
     bool? bookmarked,
   }) {
     return BloomPost(
-      id: id,
+      id: id ?? this.id,
       name: name,
       text: text ?? this.text,
       mood: mood ?? this.mood,
@@ -69,7 +74,7 @@ class BloomPost {
       videoPath: videoPath ?? this.videoPath,
       voicePath: voicePath ?? this.voicePath,
       listening: listening ?? this.listening,
-      createdAt: createdAt,
+      createdAt: createdAt ?? this.createdAt,
       liked: liked ?? this.liked,
       bookmarked: bookmarked ?? this.bookmarked,
     );
@@ -209,18 +214,28 @@ class BloomApi {
         int.tryParse('${item['created_at'] ?? 0}') ?? 0,
       );
 
+      final serverLocation = '${item['location'] ?? ''}'.trim();
+
+      final serverActivity = '${item['activity'] ?? ''}'.trim();
+
       return BloomPost(
         id: '${item['id'] ?? ''}',
         name: 'Ayie',
         text: '${item['text'] ?? ''}',
-        mood: 'New Bloom',
-        location: 'BLOOM',
+        mood: serverActivity.isEmpty ? 'New Bloom' : serverActivity,
+        location: serverLocation.isEmpty ? 'BLOOM' : serverLocation,
         createdAt: createdAt,
       );
     }).toList();
   }
 
-  static Future<BloomPost> createPost({required String text}) async {
+  static Future<BloomPost> createPost({
+    required String text,
+    String? location,
+    String? activity,
+    String mediaUrl = '',
+    String mediaType = '',
+  }) async {
     final now = DateTime.now();
     final uri = Uri.parse('$baseUrl/api/posts');
 
@@ -231,8 +246,10 @@ class BloomApi {
           body: jsonEncode({
             'user_id': userId,
             'text': text,
-            'media_url': '',
-            'media_type': '',
+            'media_url': mediaUrl,
+            'media_type': mediaType,
+            'location': location ?? '',
+            'activity': activity ?? '',
           }),
         )
         .timeout(const Duration(seconds: 15));
@@ -249,15 +266,65 @@ class BloomApi {
 
     final item = data['post'];
 
+    final createdAt = DateTime.fromMillisecondsSinceEpoch(
+      int.tryParse('${item['created_at'] ?? now.millisecondsSinceEpoch}') ??
+          now.millisecondsSinceEpoch,
+    );
+
     return BloomPost(
-      id: '${item['id']}',
+      id: '${item['id'] ?? ''}',
       name: 'Ayie',
       text: '${item['text'] ?? text}',
-      mood: 'Feeling thoughtful',
-      location: 'BLOOM',
+      mood: '${item['activity'] ?? activity ?? 'New Bloom'}',
+      location: '${item['location'] ?? location ?? 'BLOOM'}',
+      createdAt: createdAt,
+    );
+  }
+
+  static Future<BloomPost> updatePost({
+    required String id,
+    required String text,
+    String? location,
+    String? activity,
+    String mediaUrl = '',
+    String mediaType = '',
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/posts/${Uri.encodeComponent(id)}');
+
+    final response = await http
+        .put(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'text': text,
+            'location': location ?? '',
+            'activity': activity ?? '',
+            'media_url': mediaUrl,
+            'media_type': mediaType,
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal memperbarui Moment: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body);
+
+    if (data['ok'] != true || data['post'] == null) {
+      throw Exception('API gagal memperbarui Moment.');
+    }
+
+    final item = data['post'];
+
+    return BloomPost(
+      id: '${item['id'] ?? id}',
+      name: 'Ayie',
+      text: '${item['text'] ?? text}',
+      mood: '${item['activity'] ?? activity ?? 'New Bloom'}',
+      location: '${item['location'] ?? location ?? 'BLOOM'}',
       createdAt: DateTime.fromMillisecondsSinceEpoch(
-        int.tryParse('${item['created_at'] ?? now.millisecondsSinceEpoch}') ??
-            now.millisecondsSinceEpoch,
+        int.tryParse('${item['created_at'] ?? 0}') ?? 0,
       ),
     );
   }
@@ -271,6 +338,12 @@ class BloomApi {
 
     if (response.statusCode != 200) {
       throw Exception('Gagal menghapus Moment: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body);
+
+    if (data['ok'] != true) {
+      throw Exception('API gagal menghapus Moment.');
     }
   }
 }
@@ -493,14 +566,26 @@ class _BloomHomePageState extends State<BloomHomePage> {
     );
 
     try {
-      final remotePost = await BloomApi.createPost(text: post.text);
+      final remotePost = await BloomApi.createPost(
+        text: post.text,
+        location: location,
+        activity: listening,
+      );
 
-      // Simpan hasil server sebagai cache lokal.
-      await BloomStore.addPost(post.copyWith(text: remotePost.text));
+      final syncedPost = post.copyWith(
+        id: remotePost.id,
+        text: remotePost.text,
+        mood: remotePost.mood,
+        location: remotePost.location,
+        createdAt: remotePost.createdAt,
+      );
 
-      debugPrint('[BLOOM API] Unified Moment berhasil dikirim ke D1.');
+      await BloomStore.addPost(syncedPost);
+
+      debugPrint(
+        '[BLOOM API] Unified Moment + metadata berhasil dikirim ke D1.',
+      );
     } catch (e) {
-      // API gagal -> tetap simpan lokal agar Moment tidak hilang.
       await BloomStore.addPost(post);
 
       debugPrint('[BLOOM API] Gagal kirim Unified Moment ke D1: $e');
@@ -554,8 +639,34 @@ class _BloomHomePageState extends State<BloomHomePage> {
 
     if (edited == null) return;
 
-    post.text = edited;
-    await BloomStore.updatePost(post);
+    try {
+      final remotePost = await BloomApi.updatePost(
+        id: post.id,
+        text: edited,
+        location: post.location == 'BLOOM' ? '' : post.location,
+        activity: post.mood == 'New Bloom' ? '' : post.mood,
+      );
+
+      final updatedPost = post.copyWith(
+        text: remotePost.text,
+        mood: remotePost.mood,
+        location: remotePost.location,
+        createdAt: remotePost.createdAt,
+      );
+
+      await BloomStore.updatePost(updatedPost);
+
+      debugPrint('[BLOOM API] Moment berhasil diperbarui di D1.');
+    } catch (e) {
+      debugPrint('[BLOOM API] Gagal update Moment di D1: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Moment gagal diperbarui ke server.')),
+      );
+    }
+
     await _loadPosts();
   }
 
@@ -588,20 +699,36 @@ class _BloomHomePageState extends State<BloomHomePage> {
 
     if (confirmed != true) return;
 
-    await BloomStore.deletePost(post.id);
+    try {
+      await BloomApi.deletePost(post.id);
+      await BloomStore.deletePost(post.id);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      posts.removeWhere((item) => item.id == post.id);
-    });
+      setState(() {
+        posts.removeWhere((item) => item.id == post.id);
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Status berhasil dihapus.'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Status berhasil dihapus.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      debugPrint('[BLOOM API] Moment berhasil dihapus dari D1.');
+    } catch (e) {
+      debugPrint('[BLOOM API] Gagal menghapus Moment dari D1: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Moment gagal dihapus dari server.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> createThought() async {
@@ -1131,7 +1258,10 @@ class _PostCardState extends State<_PostCard> {
               InkWell(
                 borderRadius: BorderRadius.circular(20),
                 onTap: _openLocation,
-                child: _Pill(widget.location, Icons.location_on_outlined),
+                child: _Pill(
+                  widget.location.split('\n').first,
+                  Icons.location_on_outlined,
+                ),
               ),
             ],
           ),
@@ -1303,16 +1433,128 @@ Future<String?> getBloomLocation() async {
 
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.medium,
+        accuracy: LocationAccuracy.high,
       ),
     );
 
-    return '${position.latitude.toStringAsFixed(6)}, '
+    String placeName = '';
+
+    try {
+      final geocoding = Geocoding();
+      final placemarks = await geocoding.placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+
+        final parts = <String>[
+          if ((p.name ?? '').trim().isNotEmpty) p.name!.trim(),
+          if ((p.street ?? '').trim().isNotEmpty) p.street!.trim(),
+          if ((p.subLocality ?? '').trim().isNotEmpty)
+            p.subLocality!.trim(),
+          if ((p.locality ?? '').trim().isNotEmpty) p.locality!.trim(),
+          if ((p.subAdministrativeArea ?? '').trim().isNotEmpty)
+            p.subAdministrativeArea!.trim(),
+          if ((p.administrativeArea ?? '').trim().isNotEmpty)
+            p.administrativeArea!.trim(),
+        ];
+
+        placeName = parts.toSet().join(', ');
+      }
+    } catch (_) {
+      // Koordinat tetap dipakai walaupun reverse geocoding gagal.
+    }
+
+    final coordinates =
+        '${position.latitude.toStringAsFixed(6)}, '
         '${position.longitude.toStringAsFixed(6)}';
+
+    if (placeName.isEmpty) {
+      return coordinates;
+    }
+
+    return '$placeName\n$coordinates';
   } catch (_) {
     return null;
   }
 }
+
+class _BloomLocationMap extends StatelessWidget {
+  final String location;
+
+  const _BloomLocationMap({
+    required this.location,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final match = RegExp(
+      r'(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)',
+    ).firstMatch(location);
+
+    if (match == null) {
+      return const SizedBox.shrink();
+    }
+
+    final latitude = double.tryParse(match.group(1)!);
+    final longitude = double.tryParse(match.group(2)!);
+
+    if (latitude == null || longitude == null) {
+      return const SizedBox.shrink();
+    }
+
+    final point = LatLng(latitude, longitude);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        height: 190,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: point,
+            initialZoom: 16,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate:
+                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.bloom.app',
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: point,
+                  width: 52,
+                  height: 52,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: premiumBlue,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: .20),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.location_on_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 class BloomVoiceRecorder {
   final AudioRecorder recorder = AudioRecorder();
@@ -1631,6 +1873,8 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
             if (location != null) ...[
               const SizedBox(height: 10),
               _Pill(location!, Icons.location_on_rounded),
+              const SizedBox(height: 10),
+              _BloomLocationMap(location: location!),
             ],
 
             if (voicePath != null) ...[

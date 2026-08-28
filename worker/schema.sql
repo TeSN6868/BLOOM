@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS posts (
   text TEXT DEFAULT '',
   media_url TEXT DEFAULT '',
   media_type TEXT DEFAULT '',
+  location TEXT DEFAULT '',
+  activity TEXT DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
