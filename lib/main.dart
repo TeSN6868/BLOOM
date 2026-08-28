@@ -2006,6 +2006,29 @@ class _ActivityCard extends StatelessWidget {
           ),
           if (detail != null) ...[
             const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Colors.greenAccent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 7),
+                const Text(
+                  'ACTIVE',
+                  style: TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             Text(
               detail!,
               style: const TextStyle(
