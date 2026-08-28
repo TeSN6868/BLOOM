@@ -792,29 +792,13 @@ bool _isVideoFile(String path) {
 
 String _formatBloomDateTime(DateTime dateTime) {
   final local = dateTime.toLocal();
-
-  const months = [
-    'Januari',
-    'Februari',
-    'Maret',
-    'April',
-    'Mei',
-    'Juni',
-    'Juli',
-    'Agustus',
-    'September',
-    'Oktober',
-    'November',
-    'Desember',
-  ];
-
   final day = local.day.toString().padLeft(2, '0');
-  final month = months[local.month - 1];
-  final year = local.year;
+  final month = local.month.toString().padLeft(2, '0');
+  final year = local.year.toString();
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
 
-  return '$day $month $year • $hour:$minute';
+  return '$day/$month/$year • $hour:$minute';
 }
 
 class _PostCard extends StatefulWidget {
