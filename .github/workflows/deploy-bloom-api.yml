@@ -102,9 +102,42 @@ jobs:
         run: |
           set -e
 
+          echo "===== INITIALIZE D1 SCHEMA ====="
+
           wrangler d1 execute bloom-db \
             --remote \
             --file=worker/schema.sql
+
+          echo
+          echo "===== CHECK POSTS COLUMNS ====="
+
+          COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(posts);')"
+
+          echo "$COLUMNS"
+
+          if echo "$COLUMNS" | grep -q "location"; then
+            echo "location sudah ada."
+          else
+            echo "Menambahkan kolom location..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE posts ADD COLUMN location TEXT DEFAULT '';"
+          fi
+
+          if echo "$COLUMNS" | grep -q "activity"; then
+            echo "activity sudah ada."
+          else
+            echo "Menambahkan kolom activity..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE posts ADD COLUMN activity TEXT DEFAULT '';"
+          fi
+
+          echo
+          echo "===== FINAL POSTS COLUMNS ====="
+          wrangler d1 execute bloom-db \
+            --remote \
+            --command='PRAGMA table_info(posts);'
 
       - name: Deploy BLOOM API
         env:
