@@ -1,0 +1,154 @@
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (request.method === "GET" && url.pathname === "/api/health") {
+      return json({
+        ok: true,
+        service: "BLOOM API",
+        time: Date.now()
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/posts") {
+      const userId = url.searchParams.get("user_id");
+
+      if (!userId) {
+        return json({ ok: false, error: "user_id_required" }, 400);
+      }
+
+      const result = await env.DB.prepare(`
+        SELECT
+          id,
+          user_id,
+          text,
+          media_url,
+          media_type,
+          created_at,
+          updated_at
+        FROM posts
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+      `).bind(userId).all();
+
+      return json({
+        ok: true,
+        posts: result.results ?? []
+      });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/posts") {
+      const body = await request.json();
+
+      const userId = String(body.user_id ?? "").trim();
+      const text = String(body.text ?? "");
+      const mediaUrl = String(body.media_url ?? "");
+      const mediaType = String(body.media_type ?? "");
+
+      if (!userId) {
+        return json({ ok: false, error: "user_id_required" }, 400);
+      }
+
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await env.DB.prepare(`
+        INSERT INTO posts (
+          id,
+          user_id,
+          text,
+          media_url,
+          media_type,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        id,
+        userId,
+        text,
+        mediaUrl,
+        mediaType,
+        now,
+        now
+      ).run();
+
+      return json({
+        ok: true,
+        post: {
+          id,
+          user_id: userId,
+          text,
+          media_url: mediaUrl,
+          media_type: mediaType,
+          created_at: now,
+          updated_at: now
+        }
+      }, 201);
+    }
+
+    if (request.method === "DELETE" && url.pathname.startsWith("/api/posts/")) {
+      const id = url.pathname.split("/").pop();
+
+      if (!id) {
+        return json({ ok: false, error: "id_required" }, 400);
+      }
+
+      await env.DB.prepare(`
+        DELETE FROM posts WHERE id = ?
+      `).bind(id).run();
+
+      return json({
+        ok: true,
+        deleted: id
+      });
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/notifications"
+    ) {
+      const userId = url.searchParams.get("user_id");
+
+      if (!userId) {
+        return json({ ok: false, error: "user_id_required" }, 400);
+      }
+
+      const result = await env.DB.prepare(`
+        SELECT
+          id,
+          type,
+          title,
+          body,
+          post_id,
+          created_at,
+          is_read
+        FROM notifications
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+      `).bind(userId).all();
+
+      return json({
+        ok: true,
+        notifications: result.results ?? []
+      });
+    }
+
+    return json({
+      ok: false,
+      error: "not_found"
+    }, 404);
+  }
+};
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
+      "access-control-allow-headers": "Content-Type"
+    }
+  });
+}
