@@ -715,6 +715,11 @@ class _BloomHomePageState extends State<BloomHomePage> {
   List<BloomPost> posts = [];
   XFile? newMedia;
 
+  String? _livingActivity;
+  String? _livingDetail;
+  static const String _livingActivityKey = 'bloom_living_activity';
+  static const String _livingDetailKey = 'bloom_living_detail';
+
   bool _searching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -730,6 +735,80 @@ class _BloomHomePageState extends State<BloomHomePage> {
           post.mood.toLowerCase().contains(query) ||
           post.location.toLowerCase().contains(query);
     }).toList();
+  }
+
+  Future<void> _selectLivingActivity(String activity) async {
+    if (activity == 'Sleep') {
+      final isMorning = DateTime.now().hour >= 6 && DateTime.now().hour < 18;
+
+      final detail = isMorning
+          ? 'Good morning · waktunya beristirahat?'
+          : 'Good night · waktunya tidur';
+
+      setState(() {
+        _livingActivity = 'Sleep';
+        _livingDetail = detail;
+      });
+
+      await _saveLivingActivity('Sleep', detail);
+      return;
+    }
+
+    final details = <String, List<String>>{
+      'Listening': ['Music', 'Podcast', 'Radio', 'Audiobook'],
+      'Watching': ['Movie', 'TV', 'Video', 'Series'],
+      'Reading': ['Book', 'Article', 'News', 'Magazine'],
+    };
+
+    final choices = details[activity] ?? [];
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text(
+                  activity,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              for (final item in choices)
+                ListTile(
+                  leading: Icon(
+                    activity == 'Listening'
+                        ? Icons.headphones_rounded
+                        : activity == 'Watching'
+                        ? Icons.play_circle_outline_rounded
+                        : Icons.menu_book_rounded,
+                    color: premiumBlue,
+                  ),
+                  title: Text(item),
+                  onTap: () => Navigator.pop(context, item),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || selected == null) return;
+
+    setState(() {
+      _livingActivity = activity;
+      _livingDetail = selected;
+    });
+
+    await _saveLivingActivity(activity, selected);
   }
 
   void _openSearch() {
@@ -757,6 +836,31 @@ class _BloomHomePageState extends State<BloomHomePage> {
   void initState() {
     super.initState();
     _loadPosts();
+    _loadLivingActivity();
+  }
+
+  Future<void> _loadLivingActivity() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final activity = prefs.getString(_livingActivityKey);
+    final detail = prefs.getString(_livingDetailKey);
+    if (!mounted) return;
+
+    setState(() {
+      _livingActivity = activity;
+      _livingDetail = detail;
+    });
+  }
+
+  Future<void> _saveLivingActivity(String activity, String? detail) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_livingActivityKey, activity);
+
+    if (detail == null || detail.isEmpty) {
+      await prefs.remove(_livingDetailKey);
+    } else {
+      await prefs.setString(_livingDetailKey, detail);
+    }
   }
 
   Future<void> _loadPosts() async {
@@ -1087,7 +1191,11 @@ class _BloomHomePageState extends State<BloomHomePage> {
               const SizedBox(height: 20),
               const SizedBox(height: 14),
               const SizedBox(height: 26),
-              const _ActivityCard(),
+              _ActivityCard(
+                activity: _livingActivity,
+                detail: _livingDetail,
+                onActivity: _selectLivingActivity,
+              ),
               const SizedBox(height: 18),
               const Text(
                 'Moments',
@@ -1858,10 +1966,16 @@ class _Pill extends StatelessWidget {
 }
 
 class _ActivityCard extends StatelessWidget {
-  const _ActivityCard();
+  final String? activity;
+  final String? detail;
+  final ValueChanged<String> onActivity;
+
+  const _ActivityCard({this.activity, this.detail, required this.onActivity});
 
   @override
   Widget build(BuildContext context) {
+    final isMorning = DateTime.now().hour >= 6 && DateTime.now().hour < 18;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1870,10 +1984,10 @@ class _ActivityCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(25),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'YOUR DAY',
             style: TextStyle(
               color: Colors.white70,
@@ -1881,23 +1995,54 @@ class _ActivityCard extends StatelessWidget {
               fontSize: 11,
             ),
           ),
-          SizedBox(height: 5),
+          const SizedBox(height: 5),
           Text(
-            'Little activities',
-            style: TextStyle(
+            activity == null ? 'Little activities' : activity!,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 20),
+          if (detail != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              detail!,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _Activity(Icons.music_note, 'Listening'),
-              _Activity(Icons.movie_outlined, 'Watching'),
-              _Activity(Icons.menu_book, 'Reading'),
-              _Activity(Icons.bedtime, 'Sleep'),
+              _Activity(
+                Icons.music_note,
+                'Listening',
+                selected: activity == 'Listening',
+                onTap: () => onActivity('Listening'),
+              ),
+              _Activity(
+                Icons.movie_outlined,
+                'Watching',
+                selected: activity == 'Watching',
+                onTap: () => onActivity('Watching'),
+              ),
+              _Activity(
+                Icons.menu_book,
+                'Reading',
+                selected: activity == 'Reading',
+                onTap: () => onActivity('Reading'),
+              ),
+              _Activity(
+                isMorning ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                'Sleep',
+                selected: activity == 'Sleep',
+                onTap: () => onActivity('Sleep'),
+              ),
             ],
           ),
         ],
@@ -1909,24 +2054,45 @@ class _ActivityCard extends StatelessWidget {
 class _Activity extends StatelessWidget {
   final IconData icon;
   final String text;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const _Activity(this.icon, this.text);
+  const _Activity(
+    this.icon,
+    this.text, {
+    required this.onTap,
+    this.selected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.white),
-        const SizedBox(height: 7),
-        Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected
+              ? Colors.white.withValues(alpha: 0.22)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
         ),
-      ],
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(height: 7),
+            Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
