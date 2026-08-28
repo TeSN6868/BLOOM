@@ -22,6 +22,102 @@ const pageBg = Color(0xFFF7F9FC);
 
 void main() => runApp(const BloomApp());
 
+class BloomAlert {
+  final String id;
+  final String type;
+  final String message;
+  final DateTime createdAt;
+  final bool read;
+
+  const BloomAlert({
+    required this.id,
+    required this.type,
+    required this.message,
+    required this.createdAt,
+    this.read = false,
+  });
+
+  BloomAlert copyWith({
+    String? id,
+    String? type,
+    String? message,
+    DateTime? createdAt,
+    bool? read,
+  }) {
+    return BloomAlert(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      message: message ?? this.message,
+      createdAt: createdAt ?? this.createdAt,
+      read: read ?? this.read,
+    );
+  }
+
+  String encode() {
+    return [
+      id,
+      type,
+      message.replaceAll('|', ' '),
+      createdAt.millisecondsSinceEpoch.toString(),
+      read ? '1' : '0',
+    ].join('|');
+  }
+
+  static BloomAlert? decode(String value) {
+    final parts = value.split('|');
+    if (parts.length < 5) return null;
+
+    return BloomAlert(
+      id: parts[0],
+      type: parts[1],
+      message: parts[2],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        int.tryParse(parts[3]) ?? 0,
+      ),
+      read: parts[4] == '1',
+    );
+  }
+}
+
+class BloomAlertStore {
+  static const _key = 'bloom_alerts_v1';
+
+  static Future<List<BloomAlert>> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_key) ?? [];
+
+    return raw.map(BloomAlert.decode).whereType<BloomAlert>().toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  static Future<void> save(List<BloomAlert> alerts) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(
+      _key,
+      alerts.map((alert) => alert.encode()).toList(),
+    );
+  }
+
+  static Future<void> add(BloomAlert alert) async {
+    final alerts = await load();
+    alerts.insert(0, alert);
+
+    await save(alerts.take(100).toList());
+  }
+
+  static Future<void> markAllRead() async {
+    final alerts = await load();
+
+    await save(alerts.map((alert) => alert.copyWith(read: true)).toList());
+  }
+
+  static Future<int> unreadCount() async {
+    final alerts = await load();
+    return alerts.where((alert) => !alert.read).length;
+  }
+}
+
 class BloomPost {
   final String id;
   final String name;
@@ -379,8 +475,25 @@ class BloomShell extends StatefulWidget {
 
 class _BloomShellState extends State<BloomShell> {
   int index = 0;
+  int unreadAlerts = 0;
 
   final homeKey = GlobalKey<_BloomHomePageState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadAlerts();
+  }
+
+  Future<void> _loadUnreadAlerts() async {
+    final count = await BloomAlertStore.unreadCount();
+
+    if (!mounted) return;
+
+    setState(() {
+      unreadAlerts = count;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -429,9 +542,13 @@ class _BloomShellState extends State<BloomShell> {
             );
           } else {
             setState(() => index = i);
+
+            if (i == 3) {
+              _loadUnreadAlerts();
+            }
           }
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home_rounded, color: premiumBlue),
@@ -448,8 +565,15 @@ class _BloomShellState extends State<BloomShell> {
             label: 'Bloom',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_none),
-            selectedIcon: Icon(Icons.notifications, color: premiumBlue),
+            icon: _AlertNavIcon(
+              icon: Icons.notifications_none,
+              unread: unreadAlerts,
+            ),
+            selectedIcon: _AlertNavIcon(
+              icon: Icons.notifications,
+              unread: unreadAlerts,
+              selected: true,
+            ),
             label: 'Alerts',
           ),
           NavigationDestination(
@@ -459,6 +583,50 @@ class _BloomShellState extends State<BloomShell> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AlertNavIcon extends StatelessWidget {
+  final IconData icon;
+  final int unread;
+  final bool selected;
+
+  const _AlertNavIcon({
+    required this.icon,
+    required this.unread,
+    this.selected = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon, color: selected ? premiumBlue : null),
+        if (unread > 0)
+          Positioned(
+            right: -8,
+            top: -6,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: premiumBlue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                unread > 99 ? '99+' : '$unread',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -2201,15 +2369,192 @@ class CirclePage extends StatelessWidget {
   );
 }
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const _SimplePage(
-    icon: Icons.notifications,
-    title: 'Alerts',
-    subtitle: 'Aktivitas terbaru di BLOOM.',
-  );
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  List<BloomAlert> alerts = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAlerts();
+  }
+
+  Future<void> _loadAlerts() async {
+    final loaded = await BloomAlertStore.load();
+
+    if (!mounted) return;
+
+    setState(() {
+      alerts = loaded;
+      loading = false;
+    });
+  }
+
+  Future<void> _markAllRead() async {
+    await BloomAlertStore.markAllRead();
+    await _loadAlerts();
+  }
+
+  IconData _iconFor(String type) {
+    switch (type) {
+      case 'like':
+        return Icons.favorite_rounded;
+      case 'bookmark':
+        return Icons.bookmark_rounded;
+      case 'bloom':
+        return Icons.local_florist_rounded;
+      case 'media':
+        return Icons.photo_library_rounded;
+      case 'voice':
+        return Icons.mic_rounded;
+      case 'location':
+        return Icons.location_on_rounded;
+      default:
+        return Icons.notifications_rounded;
+    }
+  }
+
+  String _timeLabel(DateTime value) {
+    final difference = DateTime.now().difference(value);
+
+    if (difference.inMinutes < 1) return 'Baru saja';
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} menit lalu';
+    }
+    if (difference.inHours < 24) {
+      return '${difference.inHours} jam lalu';
+    }
+    if (difference.inDays < 7) {
+      return '${difference.inDays} hari lalu';
+    }
+
+    return '${value.day}/${value.month}/${value.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = alerts.where((alert) => !alert.read).length;
+
+    return Scaffold(
+      backgroundColor: pageBg,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Alerts',
+          style: TextStyle(color: navy, fontWeight: FontWeight.w900),
+        ),
+        actions: [
+          if (unread > 0)
+            TextButton(
+              onPressed: _markAllRead,
+              child: const Text(
+                'Tandai dibaca',
+                style: TextStyle(
+                  color: premiumBlue,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : alerts.isEmpty
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    size: 58,
+                    color: softText,
+                  ),
+                  SizedBox(height: 14),
+                  Text(
+                    'Belum ada aktivitas',
+                    style: TextStyle(
+                      color: navy,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    'Aktivitas Bloom kamu akan muncul di sini.',
+                    style: TextStyle(color: softText),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadAlerts,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: alerts.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final alert = alerts[index];
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: alert.read ? Colors.white : lightBlue,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.white,
+                          child: Icon(_iconFor(alert.type), color: premiumBlue),
+                        ),
+                        const SizedBox(width: 13),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                alert.message,
+                                style: const TextStyle(
+                                  color: navy,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _timeLabel(alert.createdAt),
+                                style: const TextStyle(
+                                  color: softText,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!alert.read)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: CircleAvatar(
+                              radius: 4,
+                              backgroundColor: premiumBlue,
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+    );
+  }
 }
 
 class ProfilePage extends StatefulWidget {
