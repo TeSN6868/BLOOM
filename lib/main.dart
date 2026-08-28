@@ -176,10 +176,8 @@ class BloomStore {
   }
 }
 
-
 class BloomApi {
-  static const String baseUrl =
-      'https://bloom-api.coolalaga686.workers.dev';
+  static const String baseUrl = 'https://bloom-api.coolalaga686.workers.dev';
 
   static const String userId = 'ayie';
 
@@ -188,9 +186,7 @@ class BloomApi {
       '$baseUrl/api/posts?user_id=${Uri.encodeQueryComponent(userId)}',
     );
 
-    final response = await http.get(uri).timeout(
-      const Duration(seconds: 15),
-    );
+    final response = await http.get(uri).timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 200) {
       throw Exception('Gagal mengambil Moments: ${response.statusCode}');
@@ -224,26 +220,22 @@ class BloomApi {
     }).toList();
   }
 
-  static Future<BloomPost> createPost({
-    required String text,
-  }) async {
+  static Future<BloomPost> createPost({required String text}) async {
     final now = DateTime.now();
     final uri = Uri.parse('$baseUrl/api/posts');
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'user_id': userId,
-        'text': text,
-        'media_url': '',
-        'media_type': '',
-      }),
-    ).timeout(
-      const Duration(seconds: 15),
-    );
+    final response = await http
+        .post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'user_id': userId,
+            'text': text,
+            'media_url': '',
+            'media_type': '',
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 201) {
       throw Exception('Gagal membuat Moment: ${response.statusCode}');
@@ -273,9 +265,9 @@ class BloomApi {
   static Future<void> deletePost(String id) async {
     final uri = Uri.parse('$baseUrl/api/posts/${Uri.encodeComponent(id)}');
 
-    final response = await http.delete(uri).timeout(
-      const Duration(seconds: 15),
-    );
+    final response = await http
+        .delete(uri)
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 200) {
       throw Exception('Gagal menghapus Moment: ${response.statusCode}');
@@ -436,9 +428,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
     );
 
     try {
-      final remotePost = await BloomApi.createPost(
-        text: post.text,
-      );
+      final remotePost = await BloomApi.createPost(text: post.text);
 
       // Simpan hasil dari server ke lokal sebagai cache.
       await BloomStore.addPost(remotePost);
@@ -502,7 +492,20 @@ class _BloomHomePageState extends State<BloomHomePage> {
       createdAt: DateTime.now(),
     );
 
-    await BloomStore.addPost(post);
+    try {
+      final remotePost = await BloomApi.createPost(text: post.text);
+
+      // Simpan hasil server sebagai cache lokal.
+      await BloomStore.addPost(post.copyWith(text: remotePost.text));
+
+      debugPrint('[BLOOM API] Unified Moment berhasil dikirim ke D1.');
+    } catch (e) {
+      // API gagal -> tetap simpan lokal agar Moment tidak hilang.
+      await BloomStore.addPost(post);
+
+      debugPrint('[BLOOM API] Gagal kirim Unified Moment ke D1: $e');
+    }
+
     await _loadPosts();
   }
 
@@ -679,6 +682,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
                     videoPath: post.videoPath,
                     voicePath: post.voicePath,
                     listening: post.listening,
+                    createdAt: post.createdAt,
                     initiallyLiked: post.liked,
                     initiallyBookmarked: post.bookmarked,
                     onEdit: () => _editPost(post),
@@ -694,22 +698,24 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   ),
                 ),
               ),
-              const _PostCard(
+              _PostCard(
                 name: 'Ayie',
                 letter: 'A',
                 text:
                     'Hari ini terasa sederhana, tapi justru hal-hal kecil seperti ini yang ingin aku simpan. ✨',
                 mood: 'Feeling peaceful',
                 location: 'Bandung',
+                createdAt: DateTime(2026, 8, 28, 9, 0),
               ),
               const SizedBox(height: 16),
-              const _PostCard(
+              _PostCard(
                 name: 'BLOOM',
                 letter: 'B',
                 text:
                     'Selamat datang di BLOOM — tempat menyimpan momen yang benar-benar berarti.',
                 mood: 'Feeling grateful',
                 location: 'BLOOM',
+                createdAt: DateTime(2026, 8, 28, 8, 30),
               ),
             ]),
           ),
@@ -784,6 +790,33 @@ bool _isVideoFile(String path) {
       lower.endsWith('.webm');
 }
 
+String _formatBloomDateTime(DateTime dateTime) {
+  final local = dateTime.toLocal();
+
+  const months = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+
+  final day = local.day.toString().padLeft(2, '0');
+  final month = months[local.month - 1];
+  final year = local.year;
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+
+  return '$day $month $year • $hour:$minute';
+}
+
 class _PostCard extends StatefulWidget {
   final String name;
   final String letter;
@@ -794,6 +827,7 @@ class _PostCard extends StatefulWidget {
   final String? videoPath;
   final String? voicePath;
   final String? listening;
+  final DateTime createdAt;
   final bool initiallyLiked;
   final bool initiallyBookmarked;
   final VoidCallback? onEdit;
@@ -811,6 +845,7 @@ class _PostCard extends StatefulWidget {
     this.videoPath,
     this.voicePath,
     this.listening,
+    required this.createdAt,
     this.initiallyLiked = false,
     this.initiallyBookmarked = false,
     this.onEdit,
@@ -918,12 +953,26 @@ class _PostCardState extends State<_PostCard> {
               ),
               const SizedBox(width: 11),
               Expanded(
-                child: Text(
-                  widget.name,
-                  style: const TextStyle(
-                    color: navy,
-                    fontWeight: FontWeight.w900,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.name,
+                      style: const TextStyle(
+                        color: navy,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _formatBloomDateTime(widget.createdAt),
+                      style: const TextStyle(
+                        color: softText,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               PopupMenuButton<String>(
@@ -1877,7 +1926,8 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() {
       name = prefs.getString(_nameKey) ?? 'Ayie';
       username = prefs.getString(_usernameKey) ?? 'ayie';
-      bio = prefs.getString(_bioKey) ??
+      bio =
+          prefs.getString(_bioKey) ??
           'Menemukan keindahan dalam hal-hal sederhana. 🌸';
       profilePhotoPath = prefs.getString(_profilePhotoKey);
       backgroundPhotoPath = prefs.getString(_backgroundPhotoKey);
@@ -1892,8 +1942,9 @@ class _ProfilePageState extends State<ProfilePage> {
       await folder.create(recursive: true);
     }
 
-    final extension =
-        file.path.contains('.') ? file.path.split('.').last : 'jpg';
+    final extension = file.path.contains('.')
+        ? file.path.split('.').last
+        : 'jpg';
 
     final path =
         '${folder.path}/${prefix}_${DateTime.now().microsecondsSinceEpoch}.$extension';
@@ -1972,10 +2023,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const Text(
                     'Nama',
-                    style: TextStyle(
-                      color: navy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 7),
                   TextField(
@@ -1994,10 +2042,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const Text(
                     'Username',
-                    style: TextStyle(
-                      color: navy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 7),
                   TextField(
@@ -2017,10 +2062,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const Text(
                     'Tentang kamu',
-                    style: TextStyle(
-                      color: navy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 7),
                   TextField(
@@ -2051,27 +2093,22 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       onPressed: () async {
-                        final prefs =
-                            await SharedPreferences.getInstance();
+                        final prefs = await SharedPreferences.getInstance();
 
                         final newName = nameController.text.trim();
-                        final newUsername =
-                            usernameController.text.trim();
+                        final newUsername = usernameController.text.trim();
                         final newBio = bioController.text.trim();
 
-                        final savedName =
-                            newName.isEmpty ? 'Ayie' : newName;
-                        final savedUsername =
-                            newUsername.isEmpty ? 'ayie' : newUsername;
+                        final savedName = newName.isEmpty ? 'Ayie' : newName;
+                        final savedUsername = newUsername.isEmpty
+                            ? 'ayie'
+                            : newUsername;
                         final savedBio = newBio.isEmpty
                             ? 'Menemukan keindahan dalam hal-hal sederhana. 🌸'
                             : newBio;
 
                         await prefs.setString(_nameKey, savedName);
-                        await prefs.setString(
-                          _usernameKey,
-                          savedUsername,
-                        );
+                        await prefs.setString(_usernameKey, savedUsername);
                         await prefs.setString(_bioKey, savedBio);
 
                         if (!mounted) return;
@@ -2087,9 +2124,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       },
                       child: const Text(
                         'Simpan Perubahan',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -2131,17 +2166,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 ListTile(
                   leading: const CircleAvatar(
                     backgroundColor: premiumBlue,
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.person_rounded, color: Colors.white),
                   ),
                   title: const Text(
                     'Foto profil',
-                    style: TextStyle(
-                      color: navy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -2152,17 +2181,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 ListTile(
                   leading: const CircleAvatar(
                     backgroundColor: premiumBlue,
-                    child: Icon(
-                      Icons.image_rounded,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.image_rounded, color: Colors.white),
                   ),
                   title: const Text(
                     'Background profil',
-                    style: TextStyle(
-                      color: navy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -2173,17 +2196,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 ListTile(
                   leading: const CircleAvatar(
                     backgroundColor: premiumBlue,
-                    child: Icon(
-                      Icons.edit_rounded,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.edit_rounded, color: Colors.white),
                   ),
                   title: const Text(
                     'Nama, username & bio',
-                    style: TextStyle(
-                      color: navy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w800),
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -2198,19 +2215,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _stat(
-    String value,
-    String label,
-    IconData icon,
-  ) {
+  Widget _stat(String value, String label, IconData icon) {
     return Expanded(
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: premiumBlue,
-            size: 22,
-          ),
+          Icon(icon, color: premiumBlue, size: 22),
           const SizedBox(height: 6),
           Text(
             value,
@@ -2235,11 +2244,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _profileTile(
-    IconData icon,
-    String title,
-    String subtitle,
-  ) {
+  Widget _profileTile(IconData icon, String title, String subtitle) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -2256,11 +2261,7 @@ class _ProfilePageState extends State<ProfilePage> {
               color: premiumBlue,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 22,
-            ),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -2287,10 +2288,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: softText,
-          ),
+          const Icon(Icons.chevron_right_rounded, color: softText),
         ],
       ),
     );
@@ -2326,20 +2324,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 fit: StackFit.expand,
                 children: [
                   if (hasBackground)
-                    Image.file(
-                      File(backgroundPhotoPath!),
-                      fit: BoxFit.cover,
-                    )
+                    Image.file(File(backgroundPhotoPath!), fit: BoxFit.cover)
                   else
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            premiumBlue,
-                            navy,
-                          ],
+                          colors: [premiumBlue, navy],
                         ),
                       ),
                     ),
@@ -2482,21 +2474,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: Row(
                       children: [
-                        _stat(
-                          '12',
-                          'Blooms',
-                          Icons.local_florist_rounded,
-                        ),
-                        _stat(
-                          '128',
-                          'Roots',
-                          Icons.people_alt_rounded,
-                        ),
-                        _stat(
-                          '64',
-                          'Branches',
-                          Icons.account_tree_rounded,
-                        ),
+                        _stat('12', 'Blooms', Icons.local_florist_rounded),
+                        _stat('128', 'Roots', Icons.people_alt_rounded),
+                        _stat('64', 'Branches', Icons.account_tree_rounded),
                       ],
                     ),
                   ),
@@ -2523,11 +2503,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         'Videos',
                         'Your visual stories',
                       ),
-                      _profileTile(
-                        Icons.mic_rounded,
-                        'Voice',
-                        'Voice moments',
-                      ),
+                      _profileTile(Icons.mic_rounded, 'Voice', 'Voice moments'),
                       _profileTile(
                         Icons.bookmark_rounded,
                         'Saved',
@@ -2551,6 +2527,3 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-
-
-
