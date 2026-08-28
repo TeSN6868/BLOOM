@@ -435,7 +435,22 @@ class _BloomHomePageState extends State<BloomHomePage> {
       createdAt: DateTime.now(),
     );
 
-    await BloomStore.addPost(post);
+    try {
+      final remotePost = await BloomApi.createPost(
+        text: post.text,
+      );
+
+      // Simpan hasil dari server ke lokal sebagai cache.
+      await BloomStore.addPost(remotePost);
+
+      debugPrint('[BLOOM API] Moment berhasil dikirim ke D1.');
+    } catch (e) {
+      // API gagal -> tetap simpan lokal agar Moment tidak hilang.
+      await BloomStore.addPost(post);
+
+      debugPrint('[BLOOM API] Gagal kirim Moment ke D1: $e');
+    }
+
     await _loadPosts();
   }
 
