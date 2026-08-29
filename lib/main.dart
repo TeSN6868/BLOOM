@@ -3688,6 +3688,8 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadProfile();
+    _loadProfileStats();
+    _loadMyStatus();
   }
 
   Future<void> _loadCloudProfile() async {
@@ -4338,8 +4340,12 @@ class _ProfilePageState extends State<ProfilePage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.67),
         borderRadius: BorderRadius.circular(19),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.32),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -4466,7 +4472,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: -1,
+                    bottom: 18,
                     child: Center(
                       child: GestureDetector(
                         onTap: _pickProfilePhoto,
@@ -4523,234 +4529,274 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
 
           SliverToBoxAdapter(
-            child: Column(
+            child: Stack(
               children: [
-                const SizedBox(height: 12),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: navy,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-
-                    // BLOOM PLATINUM-ON-GOLD BADGE
-                    // Status berasal dari server/D1.
-                    if (verifiedBadge == 'platinum_gold') ...[
-                      const SizedBox(width: 7),
-                      Container(
-                        width: 27,
-                        height: 27,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFFFFE08A),
-                              Color(0xFFD4AF37),
-                              Color(0xFFB8860B),
-                            ],
+                if (hasBackground)
+                  Positioned.fill(
+                    child: backgroundPhotoPath!.startsWith('http')
+                        ? Image.network(backgroundPhotoPath!, fit: BoxFit.cover)
+                        : Image.file(
+                            File(backgroundPhotoPath!),
+                            fit: BoxFit.cover,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFFD4AF37),
-                              blurRadius: 8,
-                              spreadRadius: 0.5,
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.check_rounded,
-                            size: 17,
-                            color: Color(0xFFE5E4E2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-
-                const SizedBox(height: 2),
-
-                Text(
-                  '@$username',
-                  style: const TextStyle(
-                    color: premiumBlue,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Text(
-                    bio,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: softText,
-                      fontSize: 14,
-                      height: 1.45,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 17,
-                      horizontal: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(23),
-                    ),
-                    child: Row(
-                      children: [
-                        _stat('$roots', 'ROOTS', Icons.fingerprint_rounded),
-                        _stat('$sprouts', 'SPROUTS', Icons.spa_rounded),
-                        _stat(
-                          '$branches',
-                          'BRANCHES',
-                          Icons.account_tree_rounded,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                // =========================
-                // BLOOM STATUS SAYA
-                // =========================
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GestureDetector(
-                    onTap: _editMyStatus,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
+                  )
+                else
+                  const Positioned.fill(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.67),
-                        borderRadius: BorderRadius.circular(21),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          width: 1,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [premiumBlue, navy],
                         ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                    ),
+                  ),
+
+                Positioned.fill(
+                  child: Container(color: Colors.white.withValues(alpha: 0.18)),
+                ),
+
+                Column(
+                  children: [
+                    const SizedBox(height: 12),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: navy,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+
+                        // BLOOM PLATINUM-ON-GOLD BADGE
+                        // Status berasal dari server/D1.
+                        if (verifiedBadge == 'platinum_gold') ...[
+                          const SizedBox(width: 7),
                           Container(
-                            width: 42,
-                            height: 42,
+                            width: 27,
+                            height: 27,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: premiumBlue.withValues(alpha: 0.12),
-                            ),
-                            child: const Icon(
-                              Icons.auto_awesome_rounded,
-                              color: premiumBlue,
-                              size: 21,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'STATUS SAYA',
-                                  style: TextStyle(
-                                    color: navy,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  myStatus.isEmpty
-                                      ? 'Bagikan apa yang sedang kamu rasakan...'
-                                      : myStatus,
-                                  maxLines: 4,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: myStatus.isEmpty ? softText : navy,
-                                    fontSize: 14,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFFFFE08A),
+                                  Color(0xFFD4AF37),
+                                  Color(0xFFB8860B),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0xFFD4AF37),
+                                  blurRadius: 8,
+                                  spreadRadius: 0.5,
                                 ),
                               ],
                             ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.check_rounded,
+                                size: 17,
+                                color: Color(0xFFE5E4E2),
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            myStatus.isEmpty
-                                ? Icons.add_rounded
-                                : Icons.edit_rounded,
-                            color: premiumBlue,
-                            size: 21,
+                        ],
+                      ],
+                    ),
+
+                    const SizedBox(height: 2),
+
+                    Text(
+                      '@$username',
+                      style: const TextStyle(
+                        color: premiumBlue,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                      child: Text(
+                        bio,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: softText,
+                          fontSize: 14,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 17,
+                          horizontal: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.67),
+                          borderRadius: BorderRadius.circular(23),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.32),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            _stat('$roots', 'ROOTS', Icons.fingerprint_rounded),
+                            _stat('$sprouts', 'SPROUTS', Icons.spa_rounded),
+                            _stat(
+                              '$branches',
+                              'BRANCHES',
+                              Icons.account_tree_rounded,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // =========================
+                    // BLOOM STATUS SAYA
+                    // =========================
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: GestureDetector(
+                        onTap: _editMyStatus,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.67),
+                            borderRadius: BorderRadius.circular(21),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: premiumBlue.withValues(alpha: 0.12),
+                                ),
+                                child: const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: premiumBlue,
+                                  size: 21,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'STATUS SAYA',
+                                      style: TextStyle(
+                                        color: navy,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.6,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      myStatus.isEmpty
+                                          ? 'Bagikan apa yang sedang kamu rasakan...'
+                                          : myStatus,
+                                      maxLines: 4,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: myStatus.isEmpty
+                                            ? softText
+                                            : navy,
+                                        fontSize: 14,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                myStatus.isEmpty
+                                    ? Icons.add_rounded
+                                    : Icons.edit_rounded,
+                                color: premiumBlue,
+                                size: 21,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          _profileTile(
+                            Icons.music_note_rounded,
+                            'Music',
+                            'Your favorite sounds',
+                          ),
+                          _profileTile(
+                            Icons.photo_library_rounded,
+                            'Photos',
+                            'Moments from your Bloom',
+                          ),
+                          _profileTile(
+                            Icons.videocam_rounded,
+                            'Videos',
+                            'Your visual stories',
+                          ),
+                          _profileTile(
+                            Icons.mic_rounded,
+                            'Voice',
+                            'Voice moments',
+                          ),
+                          _profileTile(
+                            Icons.bookmark_rounded,
+                            'Saved',
+                            'Blooms you want to keep',
+                          ),
+                          _profileTile(
+                            Icons.local_florist_rounded,
+                            'Garden',
+                            'Everything growing in your Bloom',
                           ),
                         ],
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 30),
+                  ],
                 ),
-
-                const SizedBox(height: 22),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      _profileTile(
-                        Icons.music_note_rounded,
-                        'Music',
-                        'Your favorite sounds',
-                      ),
-                      _profileTile(
-                        Icons.photo_library_rounded,
-                        'Photos',
-                        'Moments from your Bloom',
-                      ),
-                      _profileTile(
-                        Icons.videocam_rounded,
-                        'Videos',
-                        'Your visual stories',
-                      ),
-                      _profileTile(Icons.mic_rounded, 'Voice', 'Voice moments'),
-                      _profileTile(
-                        Icons.bookmark_rounded,
-                        'Saved',
-                        'Blooms you want to keep',
-                      ),
-                      _profileTile(
-                        Icons.local_florist_rounded,
-                        'Garden',
-                        'Everything growing in your Bloom',
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 30),
               ],
             ),
           ),
