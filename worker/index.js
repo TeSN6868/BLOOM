@@ -478,6 +478,180 @@ export default {
 
 
     // =========================
+    // BLOOM PROFILE STATS
+    // =========================
+
+    if (request.method === "GET" && url.pathname === "/api/profile/stats") {
+      const userId = String(
+        url.searchParams.get("user_id") ?? ""
+      ).trim();
+
+      if (!userId) {
+        return json({ ok: false, error: "user_id_required" }, 400);
+      }
+
+      const user = await env.DB.prepare(`
+        SELECT id
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `).bind(userId).first();
+
+      if (!user) {
+        return json({
+          ok: false,
+          error: "user_not_found"
+        }, 404);
+      }
+
+      const roots = await env.DB.prepare(`
+        SELECT COUNT(*) AS count
+        FROM bloom_connections
+        WHERE to_user_id = ?
+          AND kind = 'root'
+      `).bind(userId).first();
+
+      const sprouts = await env.DB.prepare(`
+        SELECT COUNT(*) AS count
+        FROM bloom_connections
+        WHERE to_user_id = ?
+          AND kind = 'sprout'
+      `).bind(userId).first();
+
+      const branches = await env.DB.prepare(`
+        SELECT COUNT(*) AS count
+        FROM bloom_connections
+        WHERE to_user_id = ?
+          AND kind = 'branch'
+      `).bind(userId).first();
+
+      return json({
+        ok: true,
+        stats: {
+          roots: Number(roots?.count ?? 0),
+          sprouts: Number(sprouts?.count ?? 0),
+          branches: Number(branches?.count ?? 0)
+        }
+      });
+    }
+
+
+    // =========================
+    // BLOOM MY STATUS
+    // =========================
+
+    if (request.method === "GET" && url.pathname === "/api/profile/status") {
+      const userId = String(
+        url.searchParams.get("user_id") ?? ""
+      ).trim();
+
+      if (!userId) {
+        return json({ ok: false, error: "user_id_required" }, 400);
+      }
+
+      const status = await env.DB.prepare(`
+        SELECT
+          user_id,
+          text,
+          updated_at
+        FROM bloom_status
+        WHERE user_id = ?
+        LIMIT 1
+      `).bind(userId).first();
+
+      return json({
+        ok: true,
+        status: status ?? {
+          user_id: userId,
+          text: "",
+          updated_at: 0
+        }
+      });
+    }
+
+
+    if (request.method === "PUT" && url.pathname === "/api/profile/status") {
+      const body = await request.json();
+
+      const userId = String(body.user_id ?? "").trim();
+      const text = String(body.text ?? "").trim();
+
+      if (!userId) {
+        return json({ ok: false, error: "user_id_required" }, 400);
+      }
+
+      const user = await env.DB.prepare(`
+        SELECT id
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `).bind(userId).first();
+
+      if (!user) {
+        return json({
+          ok: false,
+          error: "user_not_found"
+        }, 404);
+      }
+
+      if (text.length > 500) {
+        return json({
+          ok: false,
+          error: "status_too_long"
+        }, 400);
+      }
+
+      const now = Date.now();
+
+      await env.DB.prepare(`
+        INSERT INTO bloom_status (
+          user_id,
+          text,
+          updated_at
+        )
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id)
+        DO UPDATE SET
+          text = excluded.text,
+          updated_at = excluded.updated_at
+      `).bind(
+        userId,
+        text,
+        now
+      ).run();
+
+      return json({
+        ok: true,
+        status: {
+          user_id: userId,
+          text,
+          updated_at: now
+        }
+      });
+    }
+
+
+    if (request.method === "DELETE" && url.pathname === "/api/profile/status") {
+      const userId = String(
+        url.searchParams.get("user_id") ?? ""
+      ).trim();
+
+      if (!userId) {
+        return json({ ok: false, error: "user_id_required" }, 400);
+      }
+
+      await env.DB.prepare(`
+        DELETE FROM bloom_status
+        WHERE user_id = ?
+      `).bind(userId).run();
+
+      return json({
+        ok: true
+      });
+    }
+
+
+    // =========================
     // BLOOM R2 MEDIA
     // =========================
 

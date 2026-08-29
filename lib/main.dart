@@ -3676,6 +3676,11 @@ class _ProfilePageState extends State<ProfilePage> {
   // Badge verifikasi dari server.
   String verifiedBadge = '';
 
+  int roots = 0;
+  int sprouts = 0;
+  int branches = 0;
+  String myStatus = '';
+
   String? profilePhotoPath;
   String? backgroundPhotoPath;
 
@@ -3753,6 +3758,166 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _loadProfileStats() async {
+    try {
+      final userId = await BloomApi.requireUserId();
+
+      final response = await http.get(
+        Uri.parse(
+          '${BloomApi.baseUrl}/api/profile/stats?user_id=${Uri.encodeQueryComponent(userId)}',
+        ),
+      );
+
+      if (response.statusCode != 200) return;
+
+      final data = jsonDecode(response.body);
+
+      if (data is! Map || data['ok'] != true) return;
+
+      final stats = data['stats'];
+
+      if (stats is! Map) return;
+
+      if (!mounted) return;
+
+      setState(() {
+        roots = int.tryParse('${stats['roots'] ?? 0}') ?? 0;
+        sprouts = int.tryParse('${stats['sprouts'] ?? 0}') ?? 0;
+        branches = int.tryParse('${stats['branches'] ?? 0}') ?? 0;
+      });
+    } catch (e) {
+      debugPrint('[BLOOM PROFILE] Stats load failed: $e');
+    }
+  }
+
+  Future<void> _loadMyStatus() async {
+    try {
+      final userId = await BloomApi.requireUserId();
+
+      final response = await http.get(
+        Uri.parse(
+          '${BloomApi.baseUrl}/api/profile/status?user_id=${Uri.encodeQueryComponent(userId)}',
+        ),
+      );
+
+      if (response.statusCode != 200) return;
+
+      final data = jsonDecode(response.body);
+
+      if (data is! Map || data['ok'] != true) return;
+
+      final status = data['status'];
+
+      if (status is! Map) return;
+
+      if (!mounted) return;
+
+      setState(() {
+        myStatus = '${status['text'] ?? ''}';
+      });
+    } catch (e) {
+      debugPrint('[BLOOM PROFILE] Status load failed: $e');
+    }
+  }
+
+  Future<void> _saveMyStatus(String text) async {
+    try {
+      final userId = await BloomApi.requireUserId();
+
+      final response = await http.put(
+        Uri.parse('${BloomApi.baseUrl}/api/profile/status'),
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'text': text.trim()}),
+      );
+
+      if (response.statusCode != 200) return;
+
+      if (!mounted) return;
+
+      setState(() {
+        myStatus = text.trim();
+      });
+    } catch (e) {
+      debugPrint('[BLOOM PROFILE] Status save failed: $e');
+    }
+  }
+
+  Future<void> _deleteMyStatus() async {
+    try {
+      final userId = await BloomApi.requireUserId();
+
+      final response = await http.delete(
+        Uri.parse(
+          '${BloomApi.baseUrl}/api/profile/status?user_id=${Uri.encodeQueryComponent(userId)}',
+        ),
+      );
+
+      if (response.statusCode != 200) return;
+
+      if (!mounted) return;
+
+      setState(() {
+        myStatus = '';
+      });
+    } catch (e) {
+      debugPrint('[BLOOM PROFILE] Status delete failed: $e');
+    }
+  }
+
+  Future<void> _editMyStatus() async {
+    final controller = TextEditingController(text: myStatus);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Status Saya'),
+          content: TextField(
+            controller: controller,
+            maxLength: 500,
+            maxLines: 4,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Apa yang sedang kamu rasakan atau pikirkan?',
+            ),
+          ),
+          actions: [
+            if (myStatus.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, '__DELETE__');
+                },
+                child: const Text('Hapus'),
+              ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, controller.text.trim());
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (result == null) return;
+
+    if (result == '__DELETE__') {
+      await _deleteMyStatus();
+      return;
+    }
+
+    await _saveMyStatus(result);
+  }
+
   Future<void> _saveCloudProfile() async {
     try {
       final userId = await BloomApi.requireUserId();
@@ -3791,6 +3956,8 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     await _loadCloudProfile();
+    await _loadProfileStats();
+    await _loadMyStatus();
   }
 
   Future<String?> _uploadProfileMedia(XFile file, String type) async {
@@ -4454,10 +4621,95 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: Row(
                       children: [
-                        _stat('12', 'Blooms', Icons.local_florist_rounded),
-                        _stat('128', 'Roots', Icons.people_alt_rounded),
-                        _stat('64', 'Branches', Icons.account_tree_rounded),
+                        _stat('$roots', 'ROOTS', Icons.fingerprint_rounded),
+                        _stat('$sprouts', 'SPROUTS', Icons.spa_rounded),
+                        _stat(
+                          '$branches',
+                          'BRANCHES',
+                          Icons.account_tree_rounded,
+                        ),
                       ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // =========================
+                // BLOOM STATUS SAYA
+                // =========================
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GestureDetector(
+                    onTap: _editMyStatus,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.67),
+                        borderRadius: BorderRadius.circular(21),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: premiumBlue.withValues(alpha: 0.12),
+                            ),
+                            child: const Icon(
+                              Icons.auto_awesome_rounded,
+                              color: premiumBlue,
+                              size: 21,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'STATUS SAYA',
+                                  style: TextStyle(
+                                    color: navy,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  myStatus.isEmpty
+                                      ? 'Bagikan apa yang sedang kamu rasakan...'
+                                      : myStatus,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: myStatus.isEmpty ? softText : navy,
+                                    fontSize: 14,
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            myStatus.isEmpty
+                                ? Icons.add_rounded
+                                : Icons.edit_rounded,
+                            color: premiumBlue,
+                            size: 21,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

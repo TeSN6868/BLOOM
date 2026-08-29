@@ -39,3 +39,25 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created
 ON notifications(user_id, created_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS bloom_connections (
+  id TEXT PRIMARY KEY,
+  from_user_id TEXT NOT NULL,
+  to_user_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE(from_user_id, to_user_id, kind)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bloom_connections_from
+ON bloom_connections(from_user_id, kind);
+
+CREATE INDEX IF NOT EXISTS idx_bloom_connections_to
+ON bloom_connections(to_user_id, kind);
+
+CREATE TABLE IF NOT EXISTS bloom_status (
+  user_id TEXT PRIMARY KEY,
+  text TEXT DEFAULT '',
+  updated_at INTEGER NOT NULL
+);
