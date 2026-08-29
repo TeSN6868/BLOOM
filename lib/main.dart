@@ -688,6 +688,7 @@ class _BloomAuthGateState extends State<BloomAuthGate> {
     });
   }
 
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
