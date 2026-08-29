@@ -313,6 +313,8 @@ export default {
           photo_url,
           background_url,
           pin_hash,
+          role,
+          verified_badge,
           created_at
         FROM users
         WHERE username = ?
@@ -344,6 +346,8 @@ export default {
           bio: user.bio ?? "",
           photo_url: user.photo_url ?? "",
           background_url: user.background_url ?? "",
+          role: user.role ?? "user",
+          verified_badge: user.verified_badge ?? "",
           created_at: user.created_at
         }
       });
