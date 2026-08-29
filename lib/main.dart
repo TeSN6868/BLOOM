@@ -15,14 +15,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-const premiumBlue = Color(0xFF245A78);
-const lightBlue = Color(0xFFEAF4F8);
-const navy = Color(0xFF18303A);
-const softText = Color(0xFF687D88);
+const premiumBlue = Color(0xFF0756A6);
+const lightBlue = Color(0xFFE8F2FF);
+const navy = Color(0xFF06366B);
+const softText = Color(0xFF55708F);
 const pageBg = Color(0xFFFFFFFF);
 
-const bloomBlue = Color(0xFF245A78);
-const bloomGreen = Color(0xFF3F82A3);
+const bloomBlue = Color(0xFF063B78);
+const bloomGreen = Color(0xFF1976D2);
 
 const bloomGradient = LinearGradient(
   begin: Alignment.centerLeft,
@@ -1389,10 +1389,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
   List<BloomPost> posts = [];
   XFile? newMedia;
 
-  String? _livingActivity;
-  String? _livingDetail;
-  static const String _livingActivityKey = 'bloom_living_activity';
-  static const String _livingDetailKey = 'bloom_living_detail';
 
   bool _searching = false;
   final TextEditingController _searchController = TextEditingController();
@@ -1409,80 +1405,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
           post.mood.toLowerCase().contains(query) ||
           post.location.toLowerCase().contains(query);
     }).toList();
-  }
-
-  Future<void> _selectLivingActivity(String activity) async {
-    if (activity == 'Sleep') {
-      final isMorning = DateTime.now().hour >= 6 && DateTime.now().hour < 18;
-
-      final detail = isMorning
-          ? 'Good morning · waktunya beristirahat?'
-          : 'Good night · waktunya tidur';
-
-      setState(() {
-        _livingActivity = 'Sleep';
-        _livingDetail = detail;
-      });
-
-      await _saveLivingActivity('Sleep', detail);
-      return;
-    }
-
-    final details = <String, List<String>>{
-      'Listening': ['Music', 'Podcast', 'Radio', 'Audiobook'],
-      'Watching': ['Movie', 'TV', 'Video', 'Series'],
-      'Reading': ['Book', 'Article', 'News', 'Magazine'],
-    };
-
-    final choices = details[activity] ?? [];
-
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: Text(
-                  activity,
-                  style: const TextStyle(
-                    color: navy,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              for (final item in choices)
-                ListTile(
-                  leading: Icon(
-                    activity == 'Listening'
-                        ? Icons.headphones_rounded
-                        : activity == 'Watching'
-                        ? Icons.play_circle_outline_rounded
-                        : Icons.menu_book_rounded,
-                    color: premiumBlue,
-                  ),
-                  title: Text(item),
-                  onTap: () => Navigator.pop(context, item),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (!mounted || selected == null) return;
-
-    setState(() {
-      _livingActivity = activity;
-      _livingDetail = selected;
-    });
-
-    await _saveLivingActivity(activity, selected);
   }
 
   void _openSearch() {
@@ -1510,31 +1432,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
   void initState() {
     super.initState();
     _loadPosts();
-    _loadLivingActivity();
-  }
-
-  Future<void> _loadLivingActivity() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final activity = prefs.getString(_livingActivityKey);
-    final detail = prefs.getString(_livingDetailKey);
-    if (!mounted) return;
-
-    setState(() {
-      _livingActivity = activity;
-      _livingDetail = detail;
-    });
-  }
-
-  Future<void> _saveLivingActivity(String activity, String? detail) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_livingActivityKey, activity);
-
-    if (detail == null || detail.isEmpty) {
-      await prefs.remove(_livingDetailKey);
-    } else {
-      await prefs.setString(_livingDetailKey, detail);
-    }
   }
 
   Future<void> _loadPosts() async {
@@ -1882,7 +1779,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   ),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x33003B73),
+                      color: Color(0x33063B78),
                       blurRadius: 20,
                       offset: Offset(0, 8),
                     ),
@@ -2691,161 +2588,6 @@ class _Pill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ActivityCard extends StatelessWidget {
-  final String? activity;
-  final String? detail;
-  final ValueChanged<String> onActivity;
-
-  const _ActivityCard({this.activity, this.detail, required this.onActivity});
-
-  @override
-  Widget build(BuildContext context) {
-    final isMorning = DateTime.now().hour >= 6 && DateTime.now().hour < 18;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [bloomBlue, bloomGreen],
-        ),
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'YOUR DAY',
-            style: TextStyle(
-              color: Colors.white70,
-              fontWeight: FontWeight.w900,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            activity == null ? 'Little activities' : activity!,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          if (detail != null) ...[
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Colors.greenAccent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 7),
-                const Text(
-                  'ACTIVE',
-                  style: TextStyle(
-                    color: Colors.greenAccent,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              detail!,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _Activity(
-                Icons.music_note,
-                'Listening',
-                selected: activity == 'Listening',
-                onTap: () => onActivity('Listening'),
-              ),
-              _Activity(
-                Icons.movie_outlined,
-                'Watching',
-                selected: activity == 'Watching',
-                onTap: () => onActivity('Watching'),
-              ),
-              _Activity(
-                Icons.menu_book,
-                'Reading',
-                selected: activity == 'Reading',
-                onTap: () => onActivity('Reading'),
-              ),
-              _Activity(
-                isMorning ? Icons.wb_sunny_rounded : Icons.nightlight_round,
-                'Sleep',
-                selected: activity == 'Sleep',
-                onTap: () => onActivity('Sleep'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Activity extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _Activity(
-    this.icon,
-    this.text, {
-    required this.onTap,
-    this.selected = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected
-              ? Colors.white.withValues(alpha: 0.22)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(height: 7),
-            Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -4666,60 +4408,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _profileTile(IconData icon, String title, String subtitle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.67),
-        borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.32),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: premiumBlue,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: softText,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: softText),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final hasProfilePhoto =
@@ -4762,7 +4450,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [premiumBlue, navy],
+                          colors: [Color(0xFF063B78), Color(0xFF1976D2)],
                         ),
                       ),
                     ),
@@ -4878,7 +4566,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [premiumBlue, navy],
+                          colors: [Color(0xFF063B78), Color(0xFF1976D2)],
                         ),
                       ),
                     ),
