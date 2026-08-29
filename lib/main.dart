@@ -1863,15 +1863,80 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Moments',
-                style: TextStyle(
-                  color: navy,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
+
+              // BLOOM PREMIUM LIQUID FLOW
+              Container(
+                height: 112,
+                width: double.infinity,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF092B49),
+                      Color(0xFF12618A),
+                      Color(0xFF48A9D1),
+                    ],
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x3312618A),
+                      blurRadius: 20,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: BloomFlowPainter(),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 20,
+                      top: 18,
+                      child: Text(
+                        'MOMENTS',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 20,
+                      top: 42,
+                      child: Text(
+                        'Stay connected.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 21,
+                      top: 75,
+                      child: Text(
+                        'Without the noise.',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
+
+              const SizedBox(height: 16),
               const _StoryRow(),
               const SizedBox(height: 20),
               if (_searching && _searchQuery.trim().isNotEmpty)
