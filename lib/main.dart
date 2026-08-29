@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -3604,7 +3605,7 @@ class BloomFlowPainter extends CustomPainter {
         )
         ..strokeWidth = 1.2 + (i * 0.25);
 
-      final path = Path();
+      final path = ui.Path();
 
       path.moveTo(
         size.width * p.$1,
@@ -3629,7 +3630,7 @@ class BloomFlowPainter extends CustomPainter {
       ..strokeWidth = 1.0;
 
     for (int i = 0; i < 3; i++) {
-      final path = Path();
+      final path = ui.Path();
 
       path.moveTo(
         size.width * (0.05 + i * 0.04),
