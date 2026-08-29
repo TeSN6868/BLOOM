@@ -357,6 +357,63 @@ export default {
     // BLOOM ACCOUNT / PROFILE
     // =========================
 
+    // =========================
+    // BLOOM USER SEARCH
+    // =========================
+
+    if (request.method === "GET" && url.pathname === "/api/users/search") {
+      const q = String(
+        url.searchParams.get("q") ?? ""
+      ).trim().toLowerCase();
+
+      if (!q) {
+        return json({
+          ok: false,
+          error: "query_required"
+        }, 400);
+      }
+
+      if (q.length < 2) {
+        return json({
+          ok: false,
+          error: "query_too_short"
+        }, 400);
+      }
+
+      const result = await env.DB.prepare(`
+        SELECT
+          id,
+          name,
+          username,
+          bio,
+          photo_url,
+          verified_badge,
+          created_at
+        FROM users
+        WHERE
+          LOWER(username) LIKE ?
+          OR LOWER(name) LIKE ?
+        ORDER BY
+          CASE
+            WHEN LOWER(username) = ? THEN 0
+            WHEN LOWER(username) LIKE ? THEN 1
+            ELSE 2
+          END,
+          created_at DESC
+        LIMIT 20
+      `).bind(
+        `%${q}%`,
+        `%${q}%`,
+        q,
+        `${q}%`
+      ).all();
+
+      return json({
+        ok: true,
+        users: result.results ?? []
+      });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/profile") {
       const userId = url.searchParams.get("user_id");
 
