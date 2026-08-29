@@ -3867,15 +3867,11 @@ class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
   @override
   void initState() {
     super.initState();
-
     _now = DateTime.now();
 
     _timer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
-
-      setState(() {
-        _now = DateTime.now();
-      });
+      setState(() => _now = DateTime.now());
     });
   }
 
@@ -3885,40 +3881,161 @@ class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
     super.dispose();
   }
 
-  bool get _isNight {
-    final hour = _now.hour;
+  Map<String, dynamic> get _rhythm {
+    final minutes = _now.hour * 60 + _now.minute;
 
-    // 22:00 - 05:59 = waktu istirahat/tidur
-    return hour >= 22 || hour < 6;
-  }
+    if (minutes >= 300 && minutes < 420) {
+      return {
+        'title': 'Awal hari',
+        'message': [
+          'Bangun pelan-pelan. Hari baru sudah menunggumu.',
+          'Selamat pagi. Semoga hari ini lebih ringan dari kemarin.',
+          'Satu hari lagi, satu kesempatan lagi untuk tumbuh.',
+          'Tidak perlu sempurna. Cukup mulai.',
+        ][_now.day % 4],
+        'icon': Icons.wb_sunny_rounded,
+        'accent': const Color(0xFFE7A51B),
+      };
+    }
 
-  String get _title {
-    return _isNight ? 'Waktu istirahat' : 'Waktu beraktivitas';
-  }
+    if (minutes >= 420 && minutes < 540) {
+      return {
+        'title': 'Memulai hari',
+        'message': [
+          'Mulai harimu dengan tenang. Satu langkah kecil pun berarti.',
+          'Siapkan dirimu. Hari ini milikmu.',
+          'Sarapan, tarik napas, lalu mulai perlahan.',
+          'Awali hari dengan pikiran yang baik.',
+        ][_now.day % 4],
+        'icon': Icons.free_breakfast_rounded,
+        'accent': const Color(0xFFE7A51B),
+      };
+    }
 
-  String get _subtitle {
-    return _isNight
-        ? 'BLOOM sedang menemani malam kamu.'
-        : 'Selamat pagi. BLOOM menemani harimu.';
-  }
+    if (minutes >= 540 && minutes < 660) {
+      return {
+        'title': 'Waktu bergerak',
+        'message': [
+          'Tetap fokus. Kamu sedang membangun sesuatu yang berarti.',
+          'Kerjakan satu hal dulu. Kamu tidak sedang berlomba.',
+          'Percaya pada langkahmu. Kamu sudah sampai sejauh ini.',
+          'Kalau terasa berat, pelankan langkah. Jangan berhenti.',
+        ][_now.day % 4],
+        'icon': Icons.bolt_rounded,
+        'accent': premiumBlue,
+      };
+    }
 
-  IconData get _icon {
-    return _isNight ? Icons.nightlight_round : Icons.wb_sunny_rounded;
-  }
+    if (minutes >= 660 && minutes < 750) {
+      return {
+        'title': 'Menjelang siang',
+        'message': [
+          'Kamu sudah melakukan banyak hal pagi ini. Jangan lupa bernapas.',
+          'Sebentar lagi istirahat. Bertahan sedikit lagi.',
+          'Jangan lupa minum. Tubuhmu juga perlu diperhatikan.',
+          'Apa pun yang sudah kamu capai hari ini, itu tetap berarti.',
+        ][_now.day % 4],
+        'icon': Icons.wb_sunny_outlined,
+        'accent': const Color(0xFFE7A51B),
+      };
+    }
 
-  Color get _accent {
-    return _isNight ? const Color(0xFF334A7D) : const Color(0xFFE7A51B);
+    if (minutes >= 750 && minutes < 810) {
+      return {
+        'title': 'Waktu beristirahat',
+        'message': [
+          'Berhenti sebentar. Kamu juga pantas beristirahat.',
+          'Tarik napas. Lepaskan yang terlalu berat untuk sesaat.',
+          'Makanlah dengan tenang. Setelah ini kita lanjut lagi.',
+          'Istirahat bukan berarti menyerah.',
+        ][_now.day % 4],
+        'icon': Icons.restaurant_rounded,
+        'accent': const Color(0xFF5B8E7D),
+      };
+    }
+
+    if (minutes >= 810 && minutes < 930) {
+      return {
+        'title': 'Melanjutkan hari',
+        'message': [
+          'Hari belum selesai. Kita lanjut pelan-pelan.',
+          'Tidak harus cepat. Yang penting tetap bergerak.',
+          'Satu langkah lagi. Kamu bisa.',
+          'Kalau lelah, istirahat sebentar. Setelah itu coba lagi.',
+        ][_now.day % 4],
+        'icon': Icons.directions_walk_rounded,
+        'accent': premiumBlue,
+      };
+    }
+
+    if (minutes >= 930 && minutes < 1050) {
+      return {
+        'title': 'Menjelang sore',
+        'message': [
+          'Sore mulai datang. Selesaikan yang benar-benar penting.',
+          'Kamu sudah melewati sebagian besar hari ini.',
+          'Sedikit lagi. Jangan terlalu keras pada dirimu sendiri.',
+          'Hari mungkin melelahkan, tapi kamu berhasil melewatinya.',
+        ][_now.day % 4],
+        'icon': Icons.wb_twilight_rounded,
+        'accent': const Color(0xFFD17B35),
+      };
+    }
+
+    if (minutes >= 1050 && minutes < 1170) {
+      return {
+        'title': 'Waktu melepaskan lelah',
+        'message': [
+          'Saatnya melepaskan sedikit lelah.',
+          'Tinggalkan kesibukan sejenak. Sekarang waktunya untuk dirimu.',
+          'Hari ini selesai perlahan. Kamu sudah melakukan yang kamu bisa.',
+          'Pulanglah dengan hati yang lebih ringan.',
+        ][_now.day % 4],
+        'icon': Icons.home_rounded,
+        'accent': const Color(0xFF6B7FA8),
+      };
+    }
+
+    if (minutes >= 1170 && minutes < 1320) {
+      return {
+        'title': 'Malam untukmu',
+        'message': [
+          'Bagaimana harimu? Kamu boleh menceritakannya kepada BLOOM.',
+          'Malam datang. Nikmati sedikit ketenangan.',
+          'Hari ini mungkin tidak sempurna, tapi kamu berhasil melewatinya.',
+          'Terima dirimu yang sudah berjuang hari ini.',
+        ][_now.day % 4],
+        'icon': Icons.nights_stay_rounded,
+        'accent': const Color(0xFF526A9B),
+      };
+    }
+
+    return {
+      'title': 'Waktu beristirahat',
+      'message': [
+        'Cukup untuk hari ini. Kamu sudah berusaha.',
+        'Tidak semua masalah harus selesai malam ini.',
+        'Letakkan dulu semua yang berat. Besok kita lanjutkan.',
+        'Pejamkan mata. Biarkan tubuhmu beristirahat.',
+        'Malam ini, tidak perlu menjadi siapa-siapa. Cukup menjadi dirimu.',
+        'Selamat beristirahat. Semoga esok terasa lebih ringan.',
+      ][_now.day % 6],
+      'icon': Icons.nightlight_round,
+      'accent': const Color(0xFF334A7D),
+    };
   }
 
   String get _timeText {
     final hour = _now.hour.toString().padLeft(2, '0');
     final minute = _now.minute.toString().padLeft(2, '0');
-
     return '$hour:$minute';
   }
 
   @override
   Widget build(BuildContext context) {
+    final rhythm = _rhythm;
+    final accent = rhythm['accent'] as Color;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
@@ -3935,21 +4052,19 @@ class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _accent.withValues(alpha: 0.13),
+              color: accent.withValues(alpha: 0.13),
             ),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),
               child: Icon(
-                _icon,
-                key: ValueKey(_isNight),
-                color: _accent,
+                rhythm['icon'] as IconData,
+                key: ValueKey(rhythm['title']),
+                color: accent,
                 size: 27,
               ),
             ),
           ),
-
           const SizedBox(width: 13),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3965,16 +4080,18 @@ class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _title,
+                  rhythm['title'] as String,
                   style: TextStyle(
-                    color: _accent,
+                    color: accent,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _subtitle,
+                  rhythm['message'] as String,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: softText,
                     fontSize: 11,
@@ -3984,7 +4101,6 @@ class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
               ],
             ),
           ),
-
           Text(
             _timeText,
             style: const TextStyle(
