@@ -903,6 +903,8 @@ export default {
 
       const userId = String(body.user_id ?? "").trim();
       const text = String(body.text ?? "").trim();
+      const mediaUrl = String(body.media_url ?? "").trim();
+      const mediaType = String(body.media_type ?? "").trim();
 
       if (!userId) {
         return json({ ok: false, error: "user_id_required" }, 400);
@@ -935,16 +937,22 @@ export default {
         INSERT INTO bloom_status (
           user_id,
           text,
+          media_url,
+          media_type,
           updated_at
         )
-        VALUES (?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(user_id)
         DO UPDATE SET
           text = excluded.text,
+          media_url = excluded.media_url,
+          media_type = excluded.media_type,
           updated_at = excluded.updated_at
       `).bind(
         userId,
         text,
+        mediaUrl,
+        mediaType,
         now
       ).run();
 
@@ -953,11 +961,12 @@ export default {
         status: {
           user_id: userId,
           text,
+          media_url: mediaUrl,
+          media_type: mediaType,
           updated_at: now
         }
       });
     }
-
 
     if (request.method === "DELETE" && url.pathname === "/api/profile/status") {
       const userId = String(
@@ -1008,7 +1017,7 @@ export default {
         }, 404);
       }
 
-      if (!["profile", "background"].includes(type)) {
+      if (!["profile", "background", "status"].includes(type)) {
         return json({
           ok: false,
           error: "invalid_media_type"
@@ -1079,9 +1088,13 @@ export default {
       request.method === "GET" &&
       url.pathname.startsWith("/api/media/")
     ) {
-      const key = decodeURIComponent(
-        url.pathname.substring("/api/media/".length)
-      );
+      const rawPath = url.pathname.substring("/api/media/".length);
+      const key = decodeURIComponent(rawPath);
+
+      console.log("[BLOOM MEDIA GET]", {
+        rawPath,
+        key
+      });
 
       if (!key) {
         return json({
@@ -1095,15 +1108,18 @@ export default {
       if (!object) {
         return json({
           ok: false,
-          error: "media_not_found"
+          error: "media_not_found",
+          key
         }, 404);
       }
 
       const headers = new Headers();
-
       object.writeHttpMetadata(headers);
       headers.set("etag", object.httpEtag);
-      headers.set("cache-control", "public, max-age=31536000, immutable");
+      headers.set(
+        "cache-control",
+        "public, max-age=31536000, immutable"
+      );
 
       return new Response(object.body, {
         headers
