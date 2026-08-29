@@ -1959,6 +1959,8 @@ class _StoryRowState extends State<_StoryRow> {
     try {
       final userId = await BloomApi.getUserId();
 
+      debugPrint('[BLOOM STATUS DEBUG] userId=$userId');
+
       if (userId == null || userId.isEmpty) {
         if (mounted) {
           setState(() {
@@ -2073,6 +2075,11 @@ class _StoryRowState extends State<_StoryRow> {
           final displayName = name.isNotEmpty
               ? name
               : (username.isNotEmpty ? username : 'BLOOM');
+
+          debugPrint(
+            '[BLOOM STATUS PHOTO DEBUG] '
+            'name=$displayName photoUrl=$photoUrl',
+          );
 
           return GestureDetector(
             onTap: () {},
