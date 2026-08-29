@@ -4427,6 +4427,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           bio = savedBio;
                         });
 
+                        // Simpan perubahan profil ke BLOOM API / D1.
+                        await _saveCloudProfile();
+
                         if (!sheetContext.mounted) return;
                         Navigator.pop(sheetContext);
                       },

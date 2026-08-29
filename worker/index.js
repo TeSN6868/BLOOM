@@ -482,6 +482,216 @@ export default {
 
 
     // =========================
+    // BLOOM CONNECTIONS
+    // =========================
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/connections"
+    ) {
+      const userId = String(
+        url.searchParams.get("user_id") ?? ""
+      ).trim();
+
+      if (!userId) {
+        return json({
+          ok: false,
+          error: "user_id_required"
+        }, 400);
+      }
+
+      const result = await env.DB.prepare(`
+        SELECT
+          c.id,
+          c.from_user_id,
+          c.to_user_id,
+          c.kind,
+          c.created_at,
+          CASE
+            WHEN c.from_user_id = ? THEN c.to_user_id
+            ELSE c.from_user_id
+          END AS other_user_id
+        FROM bloom_connections c
+        WHERE
+          c.from_user_id = ?
+          OR c.to_user_id = ?
+        ORDER BY c.created_at DESC
+      `).bind(
+        userId,
+        userId,
+        userId
+      ).all();
+
+      return json({
+        ok: true,
+        connections: result.results ?? []
+      });
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/connections"
+    ) {
+      const body = await request.json();
+
+      const userId = String(body.user_id ?? "").trim();
+      const targetUserId = String(
+        body.target_user_id ?? ""
+      ).trim();
+      const kind = String(body.kind ?? "")
+        .trim()
+        .toLowerCase();
+
+      if (!userId || !targetUserId || !kind) {
+        return json({
+          ok: false,
+          error: "connection_fields_required"
+        }, 400);
+      }
+
+      if (userId === targetUserId) {
+        return json({
+          ok: false,
+          error: "cannot_connect_self"
+        }, 400);
+      }
+
+      if (!["root", "sprout", "branch"].includes(kind)) {
+        return json({
+          ok: false,
+          error: "invalid_connection_kind"
+        }, 400);
+      }
+
+      const users = await env.DB.prepare(`
+        SELECT id
+        FROM users
+        WHERE id IN (?, ?)
+      `).bind(
+        userId,
+        targetUserId
+      ).all();
+
+      if ((users.results ?? []).length != 2) {
+        return json({
+          ok: false,
+          error: "user_not_found"
+        }, 404);
+      }
+
+      const existing = await env.DB.prepare(`
+        SELECT
+          id,
+          from_user_id,
+          to_user_id,
+          kind,
+          created_at
+        FROM bloom_connections
+        WHERE
+          (
+            (from_user_id = ? AND to_user_id = ?)
+            OR
+            (from_user_id = ? AND to_user_id = ?)
+          )
+          AND kind = ?
+        LIMIT 1
+      `).bind(
+        userId,
+        targetUserId,
+        targetUserId,
+        userId,
+        kind
+      ).first();
+
+      if (existing) {
+        return json({
+          ok: true,
+          already_exists: true,
+          connection: existing
+        });
+      }
+
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await env.DB.prepare(`
+        INSERT INTO bloom_connections (
+          id,
+          from_user_id,
+          to_user_id,
+          kind,
+          created_at
+        )
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        id,
+        userId,
+        targetUserId,
+        kind,
+        now
+      ).run();
+
+      return json({
+        ok: true,
+        already_exists: false,
+        connection: {
+          id,
+          from_user_id: userId,
+          to_user_id: targetUserId,
+          kind,
+          created_at: now
+        }
+      });
+    }
+
+    if (
+      request.method === "DELETE" &&
+      url.pathname === "/api/connections"
+    ) {
+      const userId = String(
+        url.searchParams.get("user_id") ?? ""
+      ).trim();
+
+      const targetUserId = String(
+        url.searchParams.get("target_user_id") ?? ""
+      ).trim();
+
+      const kind = String(
+        url.searchParams.get("kind") ?? ""
+      ).trim().toLowerCase();
+
+      if (!userId || !targetUserId || !kind) {
+        return json({
+          ok: false,
+          error: "connection_fields_required"
+        }, 400);
+      }
+
+      if (!["root", "sprout", "branch"].includes(kind)) {
+        return json({
+          ok: false,
+          error: "invalid_connection_kind"
+        }, 400);
+      }
+
+      await env.DB.prepare(`
+        DELETE FROM bloom_connections
+        WHERE
+          from_user_id = ?
+          AND to_user_id = ?
+          AND kind = ?
+      `).bind(
+        userId,
+        targetUserId,
+        kind
+      ).run();
+
+      return json({
+        ok: true
+      });
+    }
+
+    // =========================
     // BLOOM PROFILE STATS
     // =========================
 
