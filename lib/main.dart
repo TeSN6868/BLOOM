@@ -1862,14 +1862,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 ),
               ),
               const SizedBox(height: 20),
-              const SizedBox(height: 14),
-              const SizedBox(height: 26),
-              _ActivityCard(
-                activity: _livingActivity,
-                detail: _livingDetail,
-                onActivity: _selectLivingActivity,
-              ),
-              const SizedBox(height: 18),
               const Text(
                 'Moments',
                 style: TextStyle(
@@ -3587,6 +3579,80 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
   }
 }
 
+
+class BloomFlowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final paths = [
+      (0.82, 0.08, 0.22, 0.30, 0.88, 0.14),
+      (0.78, 0.18, 0.18, 0.42, 0.92, 0.24),
+      (0.70, 0.30, 0.10, 0.55, 0.86, 0.40),
+      (0.62, 0.42, 0.08, 0.70, 0.76, 0.58),
+      (0.54, 0.56, 0.16, 0.84, 0.66, 0.76),
+    ];
+
+    for (int i = 0; i < paths.length; i++) {
+      final p = paths[i];
+
+      paint
+        ..color = Colors.white.withValues(
+          alpha: 0.10 + (i * 0.018),
+        )
+        ..strokeWidth = 1.2 + (i * 0.25);
+
+      final path = Path();
+
+      path.moveTo(
+        size.width * p.$1,
+        size.height * p.$2,
+      );
+
+      path.cubicTo(
+        size.width * p.$3,
+        size.height * (p.$2 + 0.05),
+        size.width * p.$4,
+        size.height * (p.$5 - 0.08),
+        size.width * p.$5,
+        size.height * p.$6,
+      );
+
+      canvas.drawPath(path, paint);
+    }
+
+    // Garis lengkung kedua untuk memberi kedalaman.
+    paint
+      ..color = Colors.white.withValues(alpha: 0.07)
+      ..strokeWidth = 1.0;
+
+    for (int i = 0; i < 3; i++) {
+      final path = Path();
+
+      path.moveTo(
+        size.width * (0.05 + i * 0.04),
+        size.height * (0.72 + i * 0.07),
+      );
+
+      path.cubicTo(
+        size.width * 0.30,
+        size.height * (0.48 + i * 0.05),
+        size.width * 0.58,
+        size.height * (0.82 - i * 0.08),
+        size.width * 0.98,
+        size.height * (0.28 + i * 0.05),
+      );
+
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant BloomFlowPainter oldDelegate) => false;
+}
+
 class _SimplePage extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -4772,38 +4838,57 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
 
-                        // BLOOM PLATINUM-ON-GOLD BADGE
+                        // BLOOM PLATINUM GOLD — compact premium badge.
                         // Status berasal dari server/D1.
                         if (verifiedBadge == 'platinum_gold') ...[
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 6),
                           Container(
-                            width: 27,
-                            height: 27,
+                            width: 19,
+                            height: 19,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Color(0xFFFFE08A),
+                                  Color(0xFFFFE7A0),
                                   Color(0xFFD4AF37),
-                                  Color(0xFFB8860B),
+                                  Color(0xFFA87808),
                                 ],
                               ),
-                              boxShadow: [
+                              boxShadow: const [
                                 BoxShadow(
-                                  color: Color(0xFFD4AF37),
-                                  blurRadius: 8,
+                                  color: Color(0x66D4AF37),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                ),
+                                BoxShadow(
+                                  color: Color(0x55B8860B),
+                                  blurRadius: 4,
                                   spreadRadius: 0.5,
                                 ),
                               ],
                             ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.check_rounded,
-                                size: 17,
-                                color: Color(0xFFE5E4E2),
-                              ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  width: 25,
+                                  height: 25,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(0x66FFD966),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.check_rounded,
+                                  size: 11,
+                                  color: Color(0xFFFFFCF2),
+                                ),
+                              ],
                             ),
                           ),
                         ],
