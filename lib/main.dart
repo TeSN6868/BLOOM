@@ -1875,14 +1875,15 @@ class _BloomHomePageState extends State<BloomHomePage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF092B49),
-                      Color(0xFF12618A),
-                      Color(0xFF48A9D1),
+                      Color(0xFF003B73),
+                      Color(0xFF1976D2),
+                      Color(0xFFDCEEFF),
+                      Color(0xFFFFFFFF),
                     ],
                   ),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x3312618A),
+                      color: Color(0x33003B73),
                       blurRadius: 20,
                       offset: Offset(0, 8),
                     ),
