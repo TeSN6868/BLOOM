@@ -257,25 +257,34 @@ export default {
       const pinHash = await hashPin(pin);
       const now = Date.now();
 
-      await env.DB.prepare(`
-        INSERT INTO users (
+      try {
+        await env.DB.prepare(`
+          INSERT INTO users (
+            id,
+            name,
+            username,
+            bio,
+            photo_url,
+            background_url,
+            pin_hash,
+            created_at
+          )
+          VALUES (?, ?, ?, '', '', '', ?, ?)
+        `).bind(
           id,
-          name,
+          name || username,
           username,
-          bio,
-          photo_url,
-          background_url,
-          pin_hash,
-          created_at
-        )
-        VALUES (?, ?, ?, '', '', '', ?, ?)
-      `).bind(
-        id,
-        name || username,
-        username,
-        pinHash,
-        now
-      ).run();
+          pinHash,
+          now
+        ).run();
+      } catch (error) {
+        return json({
+          ok: false,
+          error: "register_database_error",
+          message: String(error?.message ?? error),
+          name: String(error?.name ?? "Error")
+        }, 500);
+      }
 
       return json({
         ok: true,
