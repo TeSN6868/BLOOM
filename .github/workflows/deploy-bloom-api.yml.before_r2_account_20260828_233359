@@ -1,0 +1,163 @@
+name: Deploy BLOOM API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout BLOOM
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@4.127.0
+
+      - name: Check Cloudflare authentication
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          wrangler whoami
+
+      - name: Check R2 buckets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          echo "===== R2 BUCKETS ====="
+          wrangler r2 bucket list
+
+      - name: Get or create D1 database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+
+          echo "===== CEK D1 BLOOM-DB ====="
+
+          DB_LIST="$(wrangler d1 list)"
+
+          echo "$DB_LIST"
+
+          if echo "$DB_LIST" | grep -q "bloom-db"; then
+            echo "bloom-db sudah ada."
+
+            DB_ID="$(echo "$DB_LIST" | \
+              awk '/bloom-db/ {
+                for (i=1; i<=NF; i++) {
+                  if ($i ~ /^[0-9a-fA-F-]{36}$/) {
+                    print $i
+                    exit
+                  }
+                }
+              }')"
+          else
+            echo "bloom-db belum ada. Membuat..."
+
+            CREATE_OUTPUT="$(wrangler d1 create bloom-db)"
+
+            echo "$CREATE_OUTPUT"
+
+            DB_ID="$(echo "$CREATE_OUTPUT" | \
+              grep -oE '[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,36}' | \
+              head -n 1)"
+          fi
+
+          if [ -z "$DB_ID" ]; then
+            echo "ERROR: Database ID bloom-db tidak ditemukan."
+            exit 1
+          fi
+
+          echo "D1_DATABASE_ID=$DB_ID" >> "$GITHUB_ENV"
+
+          echo "===== D1 READY ====="
+          echo "Database ID berhasil ditemukan."
+
+      - name: Generate Wrangler config
+        run: |
+          cat > wrangler.jsonc <<EOF2
+          {
+            "\$schema": "node_modules/wrangler/config-schema.json",
+            "name": "bloom-api",
+            "main": "worker/index.js",
+            "compatibility_date": "2026-08-28",
+            "d1_databases": [
+              {
+                "binding": "DB",
+                "database_name": "bloom-db",
+                "database_id": "$D1_DATABASE_ID"
+              }
+            ]
+          }
+          EOF2
+
+          echo "===== WRANGLER CONFIG ====="
+          cat wrangler.jsonc
+
+      - name: Initialize D1 schema
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+
+          echo "===== INITIALIZE D1 SCHEMA ====="
+
+          wrangler d1 execute bloom-db \
+            --remote \
+            --file=worker/schema.sql
+
+          echo
+          echo "===== CHECK POSTS COLUMNS ====="
+
+          COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(posts);')"
+
+          echo "$COLUMNS"
+
+          if echo "$COLUMNS" | grep -q "location"; then
+            echo "location sudah ada."
+          else
+            echo "Menambahkan kolom location..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE posts ADD COLUMN location TEXT DEFAULT '';"
+          fi
+
+          if echo "$COLUMNS" | grep -q "activity"; then
+            echo "activity sudah ada."
+          else
+            echo "Menambahkan kolom activity..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE posts ADD COLUMN activity TEXT DEFAULT '';"
+          fi
+
+          echo
+          echo "===== FINAL POSTS COLUMNS ====="
+          wrangler d1 execute bloom-db \
+            --remote \
+            --command='PRAGMA table_info(posts);'
+
+      - name: Deploy BLOOM API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          wrangler deploy
+
+      - name: Test BLOOM API
+        run: |
+          echo "===== BLOOM API DEPLOYED ====="
+          echo "Worker: bloom-api"
+          echo "Database: bloom-db"
