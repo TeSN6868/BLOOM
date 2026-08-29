@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:path_provider/path_provider.dart';
@@ -29,7 +30,6 @@ const bloomGradient = LinearGradient(
   end: Alignment.centerRight,
   colors: [bloomBlue, bloomGreen],
 );
-
 
 void main() => runApp(const BloomApp());
 
@@ -1389,7 +1389,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
   List<BloomPost> posts = [];
   XFile? newMedia;
 
-
   bool _searching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -1788,9 +1787,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: CustomPaint(
-                        painter: BloomFlowPainter(),
-                      ),
+                      child: CustomPaint(painter: BloomFlowPainter()),
                     ),
                     const Positioned(
                       left: 20,
@@ -2089,8 +2086,9 @@ class _StoryRowState extends State<_StoryRow> {
                   child: CircleAvatar(
                     radius: 29,
                     backgroundColor: lightBlue,
-                    backgroundImage:
-                        photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                    backgroundImage: photoUrl.isNotEmpty
+                        ? NetworkImage(photoUrl)
+                        : null,
                     child: photoUrl.isEmpty
                         ? Text(
                             displayName.isNotEmpty
@@ -2137,7 +2135,6 @@ class _StoryRowState extends State<_StoryRow> {
     );
   }
 }
-
 
 bool _isVideoFile(String path) {
   final lower = path.toLowerCase();
@@ -3344,7 +3341,6 @@ class _EditStatusDialogState extends State<EditStatusDialog> {
   }
 }
 
-
 class _BloomFeatureHub extends StatefulWidget {
   const _BloomFeatureHub();
 
@@ -3373,11 +3369,7 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
       title: 'Videos',
       subtitle: 'Your visual stories',
     ),
-    (
-      icon: Icons.mic_rounded,
-      title: 'Voice',
-      subtitle: 'Voice moments',
-    ),
+    (icon: Icons.mic_rounded, title: 'Voice', subtitle: 'Voice moments'),
     (
       icon: Icons.bookmark_rounded,
       title: 'Saved',
@@ -3457,10 +3449,7 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
                 final target = positions[i];
 
                 return Transform.translate(
-                  offset: Offset(
-                    target.dx * t,
-                    target.dy * t,
-                  ),
+                  offset: Offset(target.dx * t, target.dy * t),
                   child: Opacity(
                     opacity: _controller.value.clamp(0.0, 1.0),
                     child: Transform.scale(
@@ -3486,11 +3475,7 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
                       ),
                     ],
                   ),
-                  child: Icon(
-                    features[i].icon,
-                    color: Colors.white,
-                    size: 19,
-                  ),
+                  child: Icon(features[i].icon, color: Colors.white, size: 19),
                 ),
               ),
             ),
@@ -3516,9 +3501,7 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
                 turns: opened ? 0.125 : 0,
                 duration: const Duration(milliseconds: 260),
                 child: Icon(
-                  opened
-                      ? Icons.close_rounded
-                      : Icons.blur_on_rounded,
+                  opened ? Icons.close_rounded : Icons.blur_on_rounded,
                   color: Colors.white,
                   size: 24,
                 ),
@@ -3530,7 +3513,6 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
     );
   }
 }
-
 
 class BloomFlowPainter extends CustomPainter {
   @override
@@ -3553,17 +3535,12 @@ class BloomFlowPainter extends CustomPainter {
       final p = paths[i];
 
       paint
-        ..color = Colors.white.withValues(
-          alpha: 0.20 - (i * 0.018),
-        )
+        ..color = Colors.white.withValues(alpha: 0.20 - (i * 0.018))
         ..strokeWidth = 1.2 + (i * 0.22);
 
       final path = ui.Path();
 
-      path.moveTo(
-        size.width * p.$1,
-        size.height * p.$2,
-      );
+      path.moveTo(size.width * p.$1, size.height * p.$2);
 
       path.cubicTo(
         size.width * p.$3,
@@ -3866,6 +3843,158 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 },
               ),
             ),
+    );
+  }
+}
+
+// ============================================================
+// BLOOM DAILY RHYTHM
+// ☀️ SIANG = AKTIF / BANGUN
+// 🌙 MALAM = ISTIRAHAT / TIDUR
+// ============================================================
+
+class BloomDailyRhythm extends StatefulWidget {
+  const BloomDailyRhythm({super.key});
+
+  @override
+  State<BloomDailyRhythm> createState() => _BloomDailyRhythmState();
+}
+
+class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
+  late DateTime _now;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _now = DateTime.now();
+
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _now = DateTime.now();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  bool get _isNight {
+    final hour = _now.hour;
+
+    // 22:00 - 05:59 = waktu istirahat/tidur
+    return hour >= 22 || hour < 6;
+  }
+
+  String get _title {
+    return _isNight ? 'Waktu istirahat' : 'Waktu beraktivitas';
+  }
+
+  String get _subtitle {
+    return _isNight
+        ? 'BLOOM sedang menemani malam kamu.'
+        : 'Selamat pagi. BLOOM menemani harimu.';
+  }
+
+  IconData get _icon {
+    return _isNight ? Icons.nightlight_round : Icons.wb_sunny_rounded;
+  }
+
+  Color get _accent {
+    return _isNight ? const Color(0xFF334A7D) : const Color(0xFFE7A51B);
+  }
+
+  String get _timeText {
+    final hour = _now.hour.toString().padLeft(2, '0');
+    final minute = _now.minute.toString().padLeft(2, '0');
+
+    return '$hour:$minute';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.42)),
+      ),
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 500),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _accent.withValues(alpha: 0.13),
+            ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: Icon(
+                _icon,
+                key: ValueKey(_isNight),
+                color: _accent,
+                size: 27,
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 13),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'DAILY RHYTHM',
+                  style: TextStyle(
+                    color: navy,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _title,
+                  style: TextStyle(
+                    color: _accent,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _subtitle,
+                  style: const TextStyle(
+                    color: softText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Text(
+            _timeText,
+            style: const TextStyle(
+              color: navy,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -4940,6 +5069,16 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
 
                     const SizedBox(height: 22),
+
+                    // =========================
+                    // BLOOM DAILY RHYTHM
+                    // =========================
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: BloomDailyRhythm(),
+                    ),
+
+                    const SizedBox(height: 14),
 
                     const SizedBox(height: 8),
 
