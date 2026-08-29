@@ -541,6 +541,63 @@ export default {
 
 
     // =========================
+    // BLOOM STATUS FEED
+    // =========================
+
+    if (request.method === "GET" && url.pathname === "/api/status/feed") {
+      const userId = String(
+        url.searchParams.get("user_id") ?? ""
+      ).trim();
+
+      if (!userId) {
+        return json({
+          ok: false,
+          error: "user_id_required"
+        }, 400);
+      }
+
+      const result = await env.DB.prepare(`
+        SELECT
+          s.user_id,
+          s.text,
+          s.updated_at,
+          u.name,
+          u.username,
+          u.photo_url
+        FROM bloom_status s
+        LEFT JOIN users u
+          ON u.id = s.user_id
+        WHERE TRIM(s.text) != ''
+          AND (
+            s.user_id = ?
+            OR s.user_id IN (
+              SELECT
+                CASE
+                  WHEN from_user_id = ? THEN to_user_id
+                  ELSE from_user_id
+                END
+              FROM bloom_connections
+              WHERE
+                (from_user_id = ? OR to_user_id = ?)
+                AND kind IN ('root', 'sprout', 'branch')
+            )
+          )
+        ORDER BY s.updated_at DESC
+      `).bind(
+        userId,
+        userId,
+        userId,
+        userId
+      ).all();
+
+      return json({
+        ok: true,
+        statuses: result.results ?? []
+      });
+    }
+
+
+    // =========================
     // BLOOM MY STATUS
     // =========================
 

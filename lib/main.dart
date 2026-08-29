@@ -1940,60 +1940,204 @@ class _BloomHomePageState extends State<BloomHomePage> {
   }
 }
 
-class _StoryRow extends StatelessWidget {
+class _StoryRow extends StatefulWidget {
   const _StoryRow();
 
   @override
-  Widget build(BuildContext context) {
-    final names = ['Your Bloom'];
+  State<_StoryRow> createState() => _StoryRowState();
+}
 
-    return SizedBox(
-      height: 92,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: names.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 15),
-        itemBuilder: (_, i) => SizedBox(
-          width: 70,
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: premiumBlue,
-                ),
-                child: CircleAvatar(
-                  radius: 28,
-                  backgroundColor: lightBlue,
-                  child: Text(
-                    i == 0 ? '+' : names[i][0],
-                    style: const TextStyle(
-                      color: premiumBlue,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                names[i],
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: navy,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
+class _StoryRowState extends State<_StoryRow> {
+  List<Map<String, dynamic>> statuses = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatuses();
+  }
+
+  Future<void> _loadStatuses() async {
+    try {
+      final userId = await BloomApi.getUserId();
+
+      if (userId == null || userId.isEmpty) {
+        if (mounted) {
+          setState(() {
+            loading = false;
+          });
+        }
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(
+          '${BloomApi.baseUrl}/api/status/feed?user_id=${Uri.encodeQueryComponent(userId)}',
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('status_feed_http_${response.statusCode}');
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data is! Map || data['ok'] != true) {
+        throw Exception('status_feed_invalid_response');
+      }
+
+      final rawStatuses = data['statuses'];
+
+      final loaded = <Map<String, dynamic>>[];
+
+      if (rawStatuses is List) {
+        for (final item in rawStatuses) {
+          if (item is Map) {
+            final text = '${item['text'] ?? ''}'.trim();
+
+            if (text.isEmpty) continue;
+
+            loaded.add({
+              'user_id': '${item['user_id'] ?? ''}',
+              'name': '${item['name'] ?? ''}'.trim(),
+              'username': '${item['username'] ?? ''}'.trim(),
+              'photo_url': '${item['photo_url'] ?? ''}'.trim(),
+              'text': text,
+              'updated_at': item['updated_at'],
+            });
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        statuses = loaded;
+        loading = false;
+      });
+    } catch (e) {
+      debugPrint('[BLOOM STATUS FEED] Load failed: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const SizedBox(
+        height: 92,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
+      );
+    }
+
+    if (statuses.isEmpty) {
+      return const SizedBox(
+        height: 92,
+        child: Center(
+          child: Text(
+            'Belum ada status',
+            style: TextStyle(
+              color: softText,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 112,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: statuses.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 15),
+        itemBuilder: (_, index) {
+          final status = statuses[index];
+
+          final name = status['name'] as String? ?? '';
+          final username = status['username'] as String? ?? '';
+          final photoUrl = status['photo_url'] as String? ?? '';
+          final text = status['text'] as String? ?? '';
+
+          final displayName = name.isNotEmpty
+              ? name
+              : (username.isNotEmpty ? username : 'BLOOM');
+
+          return SizedBox(
+            width: 78,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: premiumBlue,
+                  ),
+                  child: CircleAvatar(
+                    radius: 29,
+                    backgroundColor: lightBlue,
+                    backgroundImage:
+                        photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                    child: photoUrl.isEmpty
+                        ? Text(
+                            displayName.isNotEmpty
+                                ? displayName[0].toUpperCase()
+                                : 'B',
+                            style: const TextStyle(
+                              color: premiumBlue,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: softText,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
+
 
 bool _isVideoFile(String path) {
   final lower = path.toLowerCase();
