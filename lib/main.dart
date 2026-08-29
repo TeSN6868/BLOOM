@@ -2074,10 +2074,12 @@ class _StoryRowState extends State<_StoryRow> {
               ? name
               : (username.isNotEmpty ? username : 'BLOOM');
 
-          return SizedBox(
-            width: 78,
-            child: Column(
-              children: [
+          return GestureDetector(
+            onTap: () {},
+            child: SizedBox(
+              width: 78,
+              child: Column(
+                children: [
                 Container(
                   padding: const EdgeInsets.all(3),
                   decoration: const BoxDecoration(
@@ -2150,7 +2152,8 @@ class _StoryRowState extends State<_StoryRow> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           );
         },
