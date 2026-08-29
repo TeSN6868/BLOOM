@@ -368,6 +368,7 @@ export default {
           bio,
           photo_url,
           background_url,
+          verified_badge,
           created_at
         FROM users
         WHERE id = ?

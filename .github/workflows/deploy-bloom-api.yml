@@ -164,6 +164,27 @@ jobs:
               --command="ALTER TABLE users ADD COLUMN pin_hash TEXT DEFAULT '';"
           fi
 
+          echo
+          echo "===== CEK VERIFIED BADGE ====="
+
+          USERS_COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(users);')"
+          echo "$USERS_COLUMNS"
+
+          if echo "$USERS_COLUMNS" | grep -q "verified_badge"; then
+            echo "verified_badge sudah ada."
+          else
+            echo "Menambahkan kolom verified_badge..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE users ADD COLUMN verified_badge TEXT NOT NULL DEFAULT '';"
+          fi
+
+          echo "===== SET BLOOM GOLD BADGE AYIE ====="
+
+          wrangler d1 execute bloom-db \
+            --remote \
+            --command="UPDATE users SET verified_badge = 'platinum_gold' WHERE username = 'ayie';"
+
           echo "===== FINAL USERS COLUMNS ====="
           wrangler d1 execute bloom-db \
             --remote \

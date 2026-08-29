@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
   photo_url TEXT DEFAULT '',
   background_url TEXT DEFAULT '',
   pin_hash TEXT DEFAULT '',
+  role TEXT NOT NULL DEFAULT 'user',
+  verified_badge TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL
 );
 
