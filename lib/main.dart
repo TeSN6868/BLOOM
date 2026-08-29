@@ -4433,11 +4433,20 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _pickProfilePhoto() async {
+    debugPrint('[BLOOM PHOTO] 1. Membuka galeri...');
+
     final file = await _picker.pickImage(source: ImageSource.gallery);
 
-    if (file == null) return;
+    if (file == null) {
+      debugPrint('[BLOOM PHOTO] 2. Tidak ada foto dipilih.');
+      return;
+    }
+
+    debugPrint('[BLOOM PHOTO] 2. Foto dipilih: ${file.path}');
 
     final cloudUrl = await _uploadProfileMedia(file, 'profile');
+
+    debugPrint('[BLOOM PHOTO] 3. Hasil upload: $cloudUrl');
 
     if (cloudUrl == null || cloudUrl.isEmpty) {
       if (mounted) {
