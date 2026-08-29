@@ -165,6 +165,21 @@ jobs:
           fi
 
           echo
+          echo "===== CEK USER ROLE ====="
+
+          USERS_COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(users);')"
+          echo "$USERS_COLUMNS"
+
+          if echo "$USERS_COLUMNS" | grep -q "role"; then
+            echo "role sudah ada."
+          else
+            echo "Menambahkan kolom role..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';"
+          fi
+
+          echo
           echo "===== CEK VERIFIED BADGE ====="
 
           USERS_COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(users);')"
