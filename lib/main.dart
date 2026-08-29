@@ -4433,30 +4433,46 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _pickProfilePhoto() async {
-    debugPrint('[BLOOM PHOTO] 1. Membuka galeri...');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('BLOOM: GALERI DIBUKA')),
+      );
+    }
 
     final file = await _picker.pickImage(source: ImageSource.gallery);
 
     if (file == null) {
-      debugPrint('[BLOOM PHOTO] 2. Tidak ada foto dipilih.');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('BLOOM: TIDAK ADA FOTO DIPILIH')),
+        );
+      }
       return;
     }
 
-    debugPrint('[BLOOM PHOTO] 2. Foto dipilih: ${file.path}');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('BLOOM: FOTO DIPILIH, MENGUNGGAH...')),
+      );
+    }
 
     final cloudUrl = await _uploadProfileMedia(file, 'profile');
-
-    debugPrint('[BLOOM PHOTO] 3. Hasil upload: $cloudUrl');
 
     if (cloudUrl == null || cloudUrl.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Foto profil gagal diunggah ke server.'),
+            content: Text('BLOOM: UPLOAD GAGAL'),
           ),
         );
       }
       return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('BLOOM: UPLOAD BERHASIL')),
+      );
     }
 
     final freshCloudUrl = _freshMediaUrl(cloudUrl);
@@ -4471,6 +4487,14 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     await _saveCloudProfile();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('BLOOM: FOTO PROFIL DITERAPKAN ✓'),
+        ),
+      );
+    }
   }
 
   Future<void> _pickBackgroundPhoto() async {
