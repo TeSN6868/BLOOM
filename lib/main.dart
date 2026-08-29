@@ -688,7 +688,6 @@ class _BloomAuthGateState extends State<BloomAuthGate> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -2075,25 +2074,44 @@ class _StoryRowState extends State<_StoryRow> {
               : (username.isNotEmpty ? username : 'BLOOM');
 
           return GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () {},
             child: SizedBox(
               width: 78,
               child: Column(
                 children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: premiumBlue,
-                  ),
-                  child: ClipOval(
-                    child: photoUrl.isNotEmpty
-                        ? Image.network(
-                            photoUrl,
-                            width: 58,
-                            height: 58,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: premiumBlue,
+                    ),
+                    child: ClipOval(
+                      child: photoUrl.isNotEmpty
+                          ? Image.network(
+                              photoUrl,
+                              width: 58,
+                              height: 58,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    width: 58,
+                                    height: 58,
+                                    color: lightBlue,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      displayName.isNotEmpty
+                                          ? displayName[0].toUpperCase()
+                                          : 'B',
+                                      style: const TextStyle(
+                                        color: premiumBlue,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                            )
+                          : Container(
                               width: 58,
                               height: 58,
                               color: lightBlue,
@@ -2109,49 +2127,32 @@ class _StoryRowState extends State<_StoryRow> {
                                 ),
                               ),
                             ),
-                          )
-                        : Container(
-                            width: 58,
-                            height: 58,
-                            color: lightBlue,
-                            alignment: Alignment.center,
-                            child: Text(
-                              displayName.isNotEmpty
-                                  ? displayName[0].toUpperCase()
-                                  : 'B',
-                              style: const TextStyle(
-                                color: premiumBlue,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: navy,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                  const SizedBox(height: 6),
+                  Text(
+                    displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: navy,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: softText,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 2),
+                  Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: softText,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
                 ],
               ),
             ),
