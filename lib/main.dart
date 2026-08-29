@@ -14,11 +14,21 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-const premiumBlue = Color(0xFF285C68);
-const lightBlue = Color(0xFFE1EFEC);
-const navy = Color(0xFF18363A);
-const softText = Color(0xFF647C7D);
+const premiumBlue = Color(0xFF245A78);
+const lightBlue = Color(0xFFEAF4F8);
+const navy = Color(0xFF18303A);
+const softText = Color(0xFF687D88);
 const pageBg = Color(0xFFFFFFFF);
+
+const bloomBlue = Color(0xFF245A78);
+const bloomGreen = Color(0xFF3F82A3);
+
+const bloomGradient = LinearGradient(
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+  colors: [bloomBlue, bloomGreen],
+);
+
 
 void main() => runApp(const BloomApp());
 
@@ -2643,7 +2653,7 @@ class _ActivityCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [premiumBlue, Color(0xFF4C8DF6)],
+          colors: [bloomBlue, bloomGreen],
         ),
         borderRadius: BorderRadius.circular(25),
       ),
@@ -3564,7 +3574,7 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
                 child: Icon(
                   opened
                       ? Icons.close_rounded
-                      : Icons.local_florist_rounded,
+                      : Icons.blur_on_rounded,
                   color: Colors.white,
                   size: 24,
                 ),
