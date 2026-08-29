@@ -3390,6 +3390,193 @@ class _EditStatusDialogState extends State<EditStatusDialog> {
   }
 }
 
+
+class _BloomFeatureHub extends StatefulWidget {
+  const _BloomFeatureHub();
+
+  @override
+  State<_BloomFeatureHub> createState() => _BloomFeatureHubState();
+}
+
+class _BloomFeatureHubState extends State<_BloomFeatureHub>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool opened = false;
+
+  final features = const [
+    (
+      icon: Icons.music_note_rounded,
+      title: 'Music',
+      subtitle: 'Your favorite sounds',
+    ),
+    (
+      icon: Icons.photo_library_rounded,
+      title: 'Photos',
+      subtitle: 'Moments from your Bloom',
+    ),
+    (
+      icon: Icons.videocam_rounded,
+      title: 'Videos',
+      subtitle: 'Your visual stories',
+    ),
+    (
+      icon: Icons.mic_rounded,
+      title: 'Voice',
+      subtitle: 'Voice moments',
+    ),
+    (
+      icon: Icons.bookmark_rounded,
+      title: 'Saved',
+      subtitle: 'Blooms you want to keep',
+    ),
+    (
+      icon: Icons.local_florist_rounded,
+      title: 'Garden',
+      subtitle: 'Everything growing in your Bloom',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() {
+      opened = !opened;
+      if (opened) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
+  }
+
+  void _openFeature(int index) {
+    final feature = features[index];
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _SimplePage(
+          icon: feature.icon,
+          title: feature.title,
+          subtitle: feature.subtitle,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 270,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          for (int i = 0; i < features.length; i++)
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                final t = Curves.easeOutBack.transform(_controller.value);
+
+                // Setengah lingkaran di atas tombol BLOOM.
+                const positions = [
+                  Offset(-120, -175),
+                  Offset(-72, -205),
+                  Offset(-24, -220),
+                  Offset(24, -220),
+                  Offset(72, -205),
+                  Offset(120, -175),
+                ];
+
+                final target = positions[i];
+
+                return Transform.translate(
+                  offset: Offset(
+                    target.dx * t,
+                    target.dy * t,
+                  ),
+                  child: Opacity(
+                    opacity: _controller.value.clamp(0.0, 1.0),
+                    child: Transform.scale(
+                      scale: 0.75 + (0.25 * t),
+                      child: child,
+                    ),
+                  ),
+                );
+              },
+              child: GestureDetector(
+                onTap: () => _openFeature(i),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: premiumBlue,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    features[i].icon,
+                    color: Colors.white,
+                    size: 19,
+                  ),
+                ),
+              ),
+            ),
+
+          GestureDetector(
+            onTap: _toggle,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              width: opened ? 54 : 50,
+              height: opened ? 54 : 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: premiumBlue,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: AnimatedRotation(
+                turns: opened ? 0.125 : 0,
+                duration: const Duration(milliseconds: 260),
+                child: Icon(
+                  opened
+                      ? Icons.close_rounded
+                      : Icons.local_florist_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SimplePage extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -4756,42 +4943,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     const SizedBox(height: 22),
 
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        children: [
-                          _profileTile(
-                            Icons.music_note_rounded,
-                            'Music',
-                            'Your favorite sounds',
-                          ),
-                          _profileTile(
-                            Icons.photo_library_rounded,
-                            'Photos',
-                            'Moments from your Bloom',
-                          ),
-                          _profileTile(
-                            Icons.videocam_rounded,
-                            'Videos',
-                            'Your visual stories',
-                          ),
-                          _profileTile(
-                            Icons.mic_rounded,
-                            'Voice',
-                            'Voice moments',
-                          ),
-                          _profileTile(
-                            Icons.bookmark_rounded,
-                            'Saved',
-                            'Blooms you want to keep',
-                          ),
-                          _profileTile(
-                            Icons.local_florist_rounded,
-                            'Garden',
-                            'Everything growing in your Bloom',
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 8),
+
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: _BloomFeatureHub(),
                     ),
 
                     const SizedBox(height: 30),
