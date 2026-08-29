@@ -4187,6 +4187,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadMyStatus();
   }
 
+  String _freshMediaUrl(String url) {
+    final clean = url.trim();
+    if (clean.isEmpty) return clean;
+
+    final separator = clean.contains('?') ? '&' : '?';
+    return '$clean${separator}v=${DateTime.now().millisecondsSinceEpoch}';
+  }
+
   Future<void> _loadCloudProfile() async {
     try {
       final userId = await BloomApi.requireUserId();
@@ -4210,8 +4218,16 @@ class _ProfilePageState extends State<ProfilePage> {
       final cloudName = '${user['name'] ?? ''}'.trim();
       final cloudUsername = '${user['username'] ?? ''}'.trim();
       final cloudBio = '${user['bio'] ?? ''}';
-      final cloudPhoto = '${user['photo_url'] ?? ''}'.trim();
-      final cloudBackground = '${user['background_url'] ?? ''}'.trim();
+      final cloudPhotoRaw = '${user['photo_url'] ?? ''}'.trim();
+      final cloudBackgroundRaw = '${user['background_url'] ?? ''}'.trim();
+
+      final cloudPhoto = cloudPhotoRaw.isNotEmpty
+          ? _freshMediaUrl(cloudPhotoRaw)
+          : '';
+
+      final cloudBackground = cloudBackgroundRaw.isNotEmpty
+          ? _freshMediaUrl(cloudBackgroundRaw)
+          : '';
       final cloudVerifiedBadge = '${user['verified_badge'] ?? ''}'
           .trim()
           .toLowerCase();
@@ -4434,13 +4450,15 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
+    final freshCloudUrl = _freshMediaUrl(cloudUrl);
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profilePhotoKey, cloudUrl);
+    await prefs.setString(_profilePhotoKey, freshCloudUrl);
 
     if (!mounted) return;
 
     setState(() {
-      profilePhotoPath = cloudUrl;
+      profilePhotoPath = freshCloudUrl;
     });
 
     await _saveCloudProfile();
@@ -4462,13 +4480,15 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
+    final freshCloudUrl = _freshMediaUrl(cloudUrl);
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_backgroundPhotoKey, cloudUrl);
+    await prefs.setString(_backgroundPhotoKey, freshCloudUrl);
 
     if (!mounted) return;
 
     setState(() {
-      backgroundPhotoPath = cloudUrl;
+      backgroundPhotoPath = freshCloudUrl;
     });
 
     await _saveCloudProfile();
