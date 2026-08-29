@@ -151,6 +151,24 @@ jobs:
           fi
 
           echo
+          echo "===== CEK USERS COLUMNS ====="
+          USERS_COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(users);')"
+          echo "$USERS_COLUMNS"
+
+          if echo "$USERS_COLUMNS" | grep -q "pin_hash"; then
+            echo "pin_hash sudah ada."
+          else
+            echo "Menambahkan kolom pin_hash..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE users ADD COLUMN pin_hash TEXT DEFAULT '';"
+          fi
+
+          echo "===== FINAL USERS COLUMNS ====="
+          wrangler d1 execute bloom-db \
+            --remote \
+            --command='PRAGMA table_info(users);'
+
           echo "===== FINAL POSTS COLUMNS ====="
           wrangler d1 execute bloom-db \
             --remote \
