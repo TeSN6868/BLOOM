@@ -3673,6 +3673,9 @@ class _ProfilePageState extends State<ProfilePage> {
   String username = 'ayie';
   String bio = 'Menemukan keindahan dalam hal-hal sederhana. 🌸';
 
+  // Badge verifikasi dari server.
+  String verifiedBadge = '';
+
   String? profilePhotoPath;
   String? backgroundPhotoPath;
 
@@ -3707,6 +3710,9 @@ class _ProfilePageState extends State<ProfilePage> {
       final cloudBio = '${user['bio'] ?? ''}';
       final cloudPhoto = '${user['photo_url'] ?? ''}'.trim();
       final cloudBackground = '${user['background_url'] ?? ''}'.trim();
+      final cloudVerifiedBadge = '${user['verified_badge'] ?? ''}'
+          .trim()
+          .toLowerCase();
 
       if (cloudName.isNotEmpty) {
         await prefs.setString(_nameKey, cloudName);
@@ -3732,6 +3738,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (cloudName.isNotEmpty) name = cloudName;
         if (cloudUsername.isNotEmpty) username = cloudUsername;
         bio = cloudBio;
+        verifiedBadge = cloudVerifiedBadge;
 
         if (cloudPhoto.isNotEmpty) {
           profilePhotoPath = cloudPhoto;
@@ -3780,6 +3787,7 @@ class _ProfilePageState extends State<ProfilePage> {
           'Menemukan keindahan dalam hal-hal sederhana. 🌸';
       profilePhotoPath = prefs.getString(_profilePhotoKey);
       backgroundPhotoPath = prefs.getString(_backgroundPhotoKey);
+      verifiedBadge = '';
     });
 
     await _loadCloudProfile();
@@ -4352,14 +4360,56 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 const SizedBox(height: 12),
 
-                Text(
-                  name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: navy,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: navy,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+
+                    // BLOOM PLATINUM-ON-GOLD BADGE
+                    // Status berasal dari server/D1.
+                    if (verifiedBadge == 'platinum_gold') ...[
+                      const SizedBox(width: 7),
+                      Container(
+                        width: 27,
+                        height: 27,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFFFE08A),
+                              Color(0xFFD4AF37),
+                              Color(0xFFB8860B),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFFD4AF37),
+                              blurRadius: 8,
+                              spreadRadius: 0.5,
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 17,
+                            color: Color(0xFFE5E4E2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
 
                 const SizedBox(height: 2),
