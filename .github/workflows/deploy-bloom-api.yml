@@ -179,11 +179,41 @@ jobs:
               --command="ALTER TABLE users ADD COLUMN verified_badge TEXT NOT NULL DEFAULT '';"
           fi
 
-          echo "===== SET BLOOM GOLD BADGE AYIE ====="
+          echo "===== BOOTSTRAP BLOOM OWNER AYIE ====="
+
+          PIN_HASH="$(printf '%s' '888888' | sha256sum | awk '{print $1}')"
+
+          echo "Memeriksa akun Owner ayie..."
+
+          AYIE_EXISTS="$(wrangler d1 execute bloom-db \
+            --remote \
+            --command="SELECT id FROM users WHERE username = 'ayie' LIMIT 1;" \
+            2>/dev/null || true)"
+
+          if echo "$AYIE_EXISTS" | grep -qE '[0-9a-fA-F-]{36}'; then
+            echo "Akun ayie sudah ada. Memastikan role dan badge..."
+
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="UPDATE users SET pin_hash = '$PIN_HASH', role = 'owner', verified_badge = 'platinum_gold' WHERE username = 'ayie';"
+          else
+            echo "Akun ayie belum ada. Membuat Owner..."
+
+            OWNER_ID="$(python3 -c 'import uuid; print(uuid.uuid4())')"
+            NOW_MS="$(date +%s%3N)"
+
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="INSERT INTO users (id, name, username, bio, photo_url, background_url, pin_hash, role, verified_badge, created_at) VALUES ('$OWNER_ID', 'Ayie', 'ayie', '', '', '', '$PIN_HASH', 'owner', 'platinum_gold', $NOW_MS);"
+
+            echo "Akun Owner ayie berhasil dibuat."
+          fi
+
+          echo "===== VERIFY BLOOM OWNER ====="
 
           wrangler d1 execute bloom-db \
             --remote \
-            --command="UPDATE users SET verified_badge = 'platinum_gold' WHERE username = 'ayie';"
+            --command="SELECT id, name, username, role, verified_badge, created_at FROM users WHERE username = 'ayie' LIMIT 1;"
 
           echo "===== FINAL USERS COLUMNS ====="
           wrangler d1 execute bloom-db \
