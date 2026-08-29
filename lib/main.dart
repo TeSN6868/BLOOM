@@ -1878,7 +1878,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
                       Color(0xFF003B73),
                       Color(0xFF1976D2),
                       Color(0xFFDCEEFF),
-                      Color(0xFFFFFFFF),
                     ],
                   ),
                   boxShadow: const [
@@ -3650,16 +3649,18 @@ class _BloomFeatureHubState extends State<_BloomFeatureHub>
 class BloomFlowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
+    // Motif putih 20%: garis-garis organik yang menyatu
+    // di dalam gradasi biru BLOOM.
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
     final paths = [
-      (0.82, 0.08, 0.22, 0.30, 0.88, 0.14),
-      (0.78, 0.18, 0.18, 0.42, 0.92, 0.24),
-      (0.70, 0.30, 0.10, 0.55, 0.86, 0.40),
-      (0.62, 0.42, 0.08, 0.70, 0.76, 0.58),
-      (0.54, 0.56, 0.16, 0.84, 0.66, 0.76),
+      (0.98, 0.02, 0.62, 0.20, 0.22, 0.52),
+      (1.00, 0.14, 0.66, 0.30, 0.18, 0.62),
+      (0.96, 0.28, 0.58, 0.42, 0.12, 0.74),
+      (0.90, 0.44, 0.52, 0.58, 0.08, 0.88),
+      (0.82, 0.62, 0.46, 0.72, 0.18, 0.98),
     ];
 
     for (int i = 0; i < paths.length; i++) {
@@ -3667,9 +3668,9 @@ class BloomFlowPainter extends CustomPainter {
 
       paint
         ..color = Colors.white.withValues(
-          alpha: 0.10 + (i * 0.018),
+          alpha: 0.20 - (i * 0.018),
         )
-        ..strokeWidth = 1.2 + (i * 0.25);
+        ..strokeWidth = 1.2 + (i * 0.22);
 
       final path = ui.Path();
 
@@ -3680,7 +3681,7 @@ class BloomFlowPainter extends CustomPainter {
 
       path.cubicTo(
         size.width * p.$3,
-        size.height * (p.$2 + 0.05),
+        size.height * (p.$2 + 0.06),
         size.width * p.$4,
         size.height * (p.$5 - 0.08),
         size.width * p.$5,
@@ -3690,26 +3691,26 @@ class BloomFlowPainter extends CustomPainter {
       canvas.drawPath(path, paint);
     }
 
-    // Garis lengkung kedua untuk memberi kedalaman.
+    // Motif kedua yang lebih halus.
     paint
-      ..color = Colors.white.withValues(alpha: 0.07)
+      ..color = Colors.white.withValues(alpha: 0.12)
       ..strokeWidth = 1.0;
 
     for (int i = 0; i < 3; i++) {
       final path = ui.Path();
 
       path.moveTo(
-        size.width * (0.05 + i * 0.04),
-        size.height * (0.72 + i * 0.07),
+        size.width * (0.02 + i * 0.04),
+        size.height * (0.82 + i * 0.035),
       );
 
       path.cubicTo(
-        size.width * 0.30,
-        size.height * (0.48 + i * 0.05),
-        size.width * 0.58,
-        size.height * (0.82 - i * 0.08),
+        size.width * 0.28,
+        size.height * (0.52 + i * 0.04),
+        size.width * 0.62,
+        size.height * (0.86 - i * 0.06),
         size.width * 0.98,
-        size.height * (0.28 + i * 0.05),
+        size.height * (0.24 + i * 0.07),
       );
 
       canvas.drawPath(path, paint);
