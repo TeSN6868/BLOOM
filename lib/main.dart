@@ -14,11 +14,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-const premiumBlue = Color(0xFFC56A4A);
-const lightBlue = Color(0xFFF8EDE8);
-const navy = Color(0xFF243044);
-const softText = Color(0xFF718096);
-const pageBg = Color(0xFFF7F9FC);
+const premiumBlue = Color(0xFF285C68);
+const lightBlue = Color(0xFFE1EFEC);
+const navy = Color(0xFF18363A);
+const softText = Color(0xFF647C7D);
+const pageBg = Color(0xFFFFFFFF);
 
 void main() => runApp(const BloomApp());
 
