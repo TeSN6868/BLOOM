@@ -4433,28 +4433,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _pickProfilePhoto() async {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('BLOOM: GALERI DIBUKA')),
-      );
-    }
-
     final file = await _picker.pickImage(source: ImageSource.gallery);
 
-    if (file == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('BLOOM: TIDAK ADA FOTO DIPILIH')),
-        );
-      }
-      return;
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('BLOOM: FOTO DIPILIH, MENGUNGGAH...')),
-      );
-    }
+    if (file == null) return;
 
     final cloudUrl = await _uploadProfileMedia(file, 'profile');
 
@@ -4462,17 +4443,11 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('BLOOM: UPLOAD GAGAL'),
+            content: Text('Foto profil gagal diunggah ke server.'),
           ),
         );
       }
       return;
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('BLOOM: UPLOAD BERHASIL')),
-      );
     }
 
     final freshCloudUrl = _freshMediaUrl(cloudUrl);
@@ -4487,14 +4462,6 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     await _saveCloudProfile();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('BLOOM: FOTO PROFIL DITERAPKAN ✓'),
-        ),
-      );
-    }
   }
 
   Future<void> _pickBackgroundPhoto() async {

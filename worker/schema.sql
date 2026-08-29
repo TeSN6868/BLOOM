@@ -59,5 +59,7 @@ ON bloom_connections(to_user_id, kind);
 CREATE TABLE IF NOT EXISTS bloom_status (
   user_id TEXT PRIMARY KEY,
   text TEXT DEFAULT '',
+  media_url TEXT DEFAULT '',
+  media_type TEXT DEFAULT '',
   updated_at INTEGER NOT NULL
 );

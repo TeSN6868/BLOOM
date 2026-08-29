@@ -827,6 +827,8 @@ export default {
         SELECT
           s.user_id,
           s.text,
+          s.media_url,
+          s.media_type,
           s.updated_at,
           u.name,
           u.username,
