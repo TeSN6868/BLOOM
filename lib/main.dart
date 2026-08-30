@@ -132,6 +132,7 @@ class BloomAlertStore {
 class BloomPost {
   final String id;
   final String name;
+  final String? photoUrl;
   String text;
   final String mood;
   final String location;
@@ -146,6 +147,7 @@ class BloomPost {
   BloomPost({
     required this.id,
     required this.name,
+    this.photoUrl,
     required this.text,
     required this.mood,
     required this.location,
@@ -505,7 +507,12 @@ class BloomApi {
 
       return BloomPost(
         id: '${item['id'] ?? ''}',
-        name: 'Ayie',
+        name: '${item['name'] ?? ''}'.trim().isEmpty
+            ? 'BLOOM'
+            : '${item['name']}',
+        photoUrl: '${item['photo_url'] ?? ''}'.trim().isEmpty
+            ? null
+            : '${item['photo_url']}'.trim(),
         text: '${item['text'] ?? ''}',
         mood: serverActivity.isEmpty ? 'New Bloom' : serverActivity,
         location: serverLocation.isEmpty ? 'BLOOM' : serverLocation,
@@ -1956,6 +1963,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _PostCard(
                     name: post.name,
+                    photoUrl: post.photoUrl,
                     letter: post.name.isNotEmpty ? post.name[0] : 'A',
                     text: post.text,
                     mood: post.mood,
@@ -2445,6 +2453,7 @@ class _StoryRowState extends State<_StoryRow> {
 
 class _PostCard extends StatefulWidget {
   final String name;
+  final String? photoUrl;
   final String letter;
   final String text;
   final String mood;
@@ -2464,6 +2473,7 @@ class _PostCard extends StatefulWidget {
 
   const _PostCard({
     required this.name,
+    this.photoUrl,
     required this.letter,
     required this.text,
     required this.mood,
@@ -2571,13 +2581,20 @@ class _PostCardState extends State<_PostCard> {
             children: [
               CircleAvatar(
                 backgroundColor: premiumBlue,
-                child: Text(
-                  widget.letter,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+                backgroundImage:
+                    widget.photoUrl != null && widget.photoUrl!.isNotEmpty
+                        ? NetworkImage(widget.photoUrl!)
+                        : null,
+                child:
+                    widget.photoUrl == null || widget.photoUrl!.isEmpty
+                        ? Text(
+                            widget.letter,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          )
+                        : null,
               ),
               const SizedBox(width: 11),
               Expanded(

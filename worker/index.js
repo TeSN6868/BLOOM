@@ -19,18 +19,23 @@ export default {
 
       const result = await env.DB.prepare(`
         SELECT
-          id,
-          user_id,
-          text,
-          media_url,
-          media_type,
-          location,
-          activity,
-          created_at,
-          updated_at
-        FROM posts
-        WHERE user_id = ?
-        ORDER BY created_at DESC
+          p.id,
+          p.user_id,
+          p.text,
+          p.media_url,
+          p.media_type,
+          p.location,
+          p.activity,
+          p.created_at,
+          p.updated_at,
+          u.name,
+          u.username,
+          u.photo_url
+        FROM posts p
+        LEFT JOIN users u
+          ON u.id = p.user_id
+        WHERE p.user_id = ?
+        ORDER BY p.created_at DESC
       `).bind(userId).all();
 
       return json({
