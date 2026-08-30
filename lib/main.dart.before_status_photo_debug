@@ -636,38 +636,6 @@ class BloomApi {
       throw Exception('API gagal menghapus Moment.');
     }
   }
-
-  static Future<Map<String, dynamic>> updateProfileStatus({
-    required String userId,
-    required String text,
-    String mediaUrl = '',
-    String mediaType = '',
-  }) async {
-    final response = await http.put(
-      Uri.parse('${BloomApi.baseUrl}/api/profile/status'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user_id': userId,
-        'text': text,
-        'media_url': mediaUrl,
-        'media_type': mediaType,
-      }),
-    );
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'profile_status_http_${response.statusCode}: ${response.body}',
-      );
-    }
-
-    final data = jsonDecode(response.body);
-
-    if (data is! Map || data['ok'] != true) {
-      throw Exception('profile_status_update_failed');
-    }
-
-    return Map<String, dynamic>.from(data);
-  }
 }
 
 class BloomApp extends StatelessWidget {
@@ -719,6 +687,7 @@ class _BloomAuthGateState extends State<BloomAuthGate> {
       loading = false;
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1466,32 +1435,13 @@ class _BloomHomePageState extends State<BloomHomePage> {
   }
 
   Future<void> _loadPosts() async {
-    try {
-      // D1/server menjadi sumber utama Moment Beranda.
-      final remotePosts = await BloomApi.loadPosts();
+    final loaded = await BloomStore.loadPosts();
 
-      // Simpan hasil server sebagai cache lokal.
-      await BloomStore.savePosts(remotePosts);
+    if (!mounted) return;
 
-      if (!mounted) return;
-
-      setState(() {
-        posts = []; // BLOOM: kosongkan seluruh status di Beranda
-      });
-
-      debugPrint('[BLOOM API] ${remotePosts.length} Moment dimuat dari D1.');
-    } catch (e) {
-      // Jika server tidak tersedia, gunakan cache lokal.
-      debugPrint('[BLOOM API] Load D1 gagal: $e');
-
-      final localPosts = await BloomStore.loadPosts();
-
-      if (!mounted) return;
-
-      setState(() {
-        posts = localPosts;
-      });
-    }
+    setState(() {
+      posts = loaded;
+    });
   }
 
   Future<void> _addThought(String thought) async {
@@ -1882,7 +1832,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
               ),
 
               const SizedBox(height: 16),
-
+              const _StoryRow(),
               const SizedBox(height: 20),
               if (_searching && _searchQuery.trim().isNotEmpty)
                 Padding(
@@ -1957,233 +1907,35 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   ),
                 ),
               ),
+              _PostCard(
+                name: 'Ayie',
+                letter: 'A',
+                text:
+                    'Hari ini terasa sederhana, tapi justru hal-hal kecil seperti ini yang ingin aku simpan. ✨',
+                mood: 'Feeling peaceful',
+                location: 'Bandung',
+                createdAt: DateTime(2026, 8, 28, 9, 0),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-ayie'),
+              ),
+              const SizedBox(height: 16),
+              _PostCard(
+                name: 'BLOOM',
+                letter: 'B',
+                text:
+                    'Selamat datang di BLOOM — tempat menyimpan momen yang benar-benar berarti.',
+                mood: 'Feeling grateful',
+                location: 'BLOOM',
+                createdAt: DateTime(2026, 8, 28, 8, 30),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-bloom'),
+              ),
             ]),
           ),
         ),
       ],
     );
   }
-}
-
-class _BloomStoryViewer extends StatefulWidget {
-  final String displayName;
-  final String mediaUrl;
-  final String mediaType;
-  final String text;
-
-  const _BloomStoryViewer({
-    required this.displayName,
-    required this.mediaUrl,
-    required this.mediaType,
-    required this.text,
-  });
-
-  @override
-  State<_BloomStoryViewer> createState() => _BloomStoryViewerState();
-}
-
-class _BloomStoryViewerState extends State<_BloomStoryViewer> {
-  VideoPlayerController? _videoController;
-  bool _isVideo = false;
-  bool _videoReady = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _isVideo =
-        widget.mediaType.toLowerCase().contains('video') ||
-        (widget.mediaUrl.isNotEmpty && _isVideoFile(widget.mediaUrl));
-
-    if (_isVideo && widget.mediaUrl.isNotEmpty) {
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.mediaUrl),
-      );
-
-      _videoController!
-          .initialize()
-          .then((_) {
-            if (!mounted) return;
-
-            setState(() {
-              _videoReady = true;
-            });
-
-            _videoController!
-              ..setLooping(true)
-              ..play();
-          })
-          .catchError((error) {
-            debugPrint('[BLOOM STORY VIDEO] $error');
-
-            if (!mounted) return;
-
-            setState(() {
-              _videoReady = false;
-            });
-          });
-    }
-  }
-
-  @override
-  void dispose() {
-    _videoController?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasMedia = widget.mediaUrl.isNotEmpty;
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Center(
-                child: !hasMedia
-                    ? _textStory()
-                    : _isVideo
-                    ? _buildVideo()
-                    : _buildImage(),
-              ),
-            ),
-
-            Positioned(
-              top: 12,
-              left: 14,
-              right: 14,
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 21,
-                    backgroundColor: Colors.white.withValues(alpha: 0.15),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      widget.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (widget.text.isNotEmpty)
-              Positioned(
-                left: 20,
-                right: 20,
-                bottom: 28,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    widget.text,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImage() {
-    return Image.network(
-      widget.mediaUrl,
-      fit: BoxFit.contain,
-      width: double.infinity,
-      height: double.infinity,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-
-        return const CircularProgressIndicator(color: Colors.white);
-      },
-      errorBuilder: (_, _, _) {
-        return _textStory(fallback: 'Foto Story tidak dapat ditampilkan.');
-      },
-    );
-  }
-
-  Widget _buildVideo() {
-    if (!_videoReady || _videoController == null) {
-      return const CircularProgressIndicator(color: Colors.white);
-    }
-
-    return AspectRatio(
-      aspectRatio: _videoController!.value.aspectRatio,
-      child: VideoPlayer(_videoController!),
-    );
-  }
-
-  Widget _textStory({String? fallback}) {
-    final content = widget.text.isNotEmpty
-        ? widget.text
-        : (fallback ?? 'BLOOM');
-
-    return Padding(
-      padding: const EdgeInsets.all(28),
-      child: Center(
-        child: Text(
-          content,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-bool _isVideoFile(String path) {
-  final lower = path.toLowerCase();
-  return lower.endsWith('.mp4') ||
-      lower.endsWith('.mov') ||
-      lower.endsWith('.m4v') ||
-      lower.endsWith('.avi') ||
-      lower.endsWith('.mkv') ||
-      lower.endsWith('.webm');
-}
-
-String _formatBloomDateTime(DateTime dateTime) {
-  final local = dateTime.toLocal();
-  final day = local.day.toString().padLeft(2, '0');
-  final month = local.month.toString().padLeft(2, '0');
-  final year = local.year.toString();
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-
-  return '$day/$month/$year • $hour:$minute';
 }
 
 class _StoryRow extends StatefulWidget {
@@ -2328,38 +2080,20 @@ class _StoryRowState extends State<_StoryRow> {
               width: 78,
               child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: premiumBlue,
-                    ),
-                    child: ClipOval(
-                      child: photoUrl.isNotEmpty
-                          ? Image.network(
-                              photoUrl,
-                              width: 58,
-                              height: 58,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    width: 58,
-                                    height: 58,
-                                    color: lightBlue,
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      displayName.isNotEmpty
-                                          ? displayName[0].toUpperCase()
-                                          : 'B',
-                                      style: const TextStyle(
-                                        color: premiumBlue,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                            )
-                          : Container(
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: premiumBlue,
+                  ),
+                  child: ClipOval(
+                    child: photoUrl.isNotEmpty
+                        ? Image.network(
+                            photoUrl,
+                            width: 58,
+                            height: 58,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
                               width: 58,
                               height: 58,
                               color: lightBlue,
@@ -2375,32 +2109,49 @@ class _StoryRowState extends State<_StoryRow> {
                                 ),
                               ),
                             ),
-                    ),
+                          )
+                        : Container(
+                            width: 58,
+                            height: 58,
+                            color: lightBlue,
+                            alignment: Alignment.center,
+                            child: Text(
+                              displayName.isNotEmpty
+                                  ? displayName[0].toUpperCase()
+                                  : 'B',
+                              style: const TextStyle(
+                                color: premiumBlue,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: navy,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: navy,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: softText,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                    ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: softText,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
                 ],
               ),
             ),
@@ -2409,6 +2160,27 @@ class _StoryRowState extends State<_StoryRow> {
       ),
     );
   }
+}
+
+bool _isVideoFile(String path) {
+  final lower = path.toLowerCase();
+  return lower.endsWith('.mp4') ||
+      lower.endsWith('.mov') ||
+      lower.endsWith('.m4v') ||
+      lower.endsWith('.avi') ||
+      lower.endsWith('.mkv') ||
+      lower.endsWith('.webm');
+}
+
+String _formatBloomDateTime(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  final day = local.day.toString().padLeft(2, '0');
+  final month = local.month.toString().padLeft(2, '0');
+  final year = local.year.toString();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+
+  return '$day/$month/$year • $hour:$minute';
 }
 
 class _PostCard extends StatefulWidget {
@@ -3157,36 +2929,6 @@ class BloomVoiceRecorder {
   Future<void> dispose() async {
     await recorder.dispose();
   }
-
-  static Future<Map<String, dynamic>> updateProfileStatus({
-    required String userId,
-    required String text,
-    String mediaUrl = '',
-    String mediaType = '',
-  }) async {
-    final response = await http.put(
-      Uri.parse('${BloomApi.baseUrl}/api/profile/status'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user_id': userId,
-        'text': text.trim(),
-        'media_url': mediaUrl,
-        'media_type': mediaType,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('profile_status_http_${response.statusCode}');
-    }
-
-    final data = jsonDecode(response.body);
-
-    if (data is! Map || data['ok'] != true) {
-      throw Exception('profile_status_invalid_response');
-    }
-
-    return Map<String, dynamic>.from(data);
-  }
 }
 
 class CreateBloomSheet extends StatefulWidget {
@@ -3217,7 +2959,6 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
   String? listening;
   bool recording = false;
   bool publishing = false;
-  bool publishAsStatus = false;
 
   @override
   void dispose() {
@@ -3361,57 +3102,17 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
 
     setState(() => publishing = true);
 
-    try {
-      if (publishAsStatus) {
-        if (text.isEmpty) {
-          throw Exception('Status Story membutuhkan teks.');
-        }
+    await widget.onCreate?.call(
+      text: text,
+      image: image,
+      video: video,
+      location: location,
+      voicePath: voicePath,
+      listening: listening,
+    );
 
-        final userId = await BloomApi.getUserId();
-
-        if (userId == null || userId.isEmpty) {
-          throw Exception('user_id_required');
-        }
-
-        await BloomApi.updateProfileStatus(userId: userId, text: text);
-
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Status berhasil dikirim ke Story.')),
-        );
-
-        Navigator.pop(context);
-        return;
-      }
-
-      await widget.onCreate?.call(
-        text: text,
-        image: image,
-        video: video,
-        location: location,
-        voicePath: voicePath,
-        listening: listening,
-      );
-
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal mengirim: '
-            '${e.toString().replaceFirst('Exception: ', '')}',
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => publishing = false);
-      }
+    if (mounted) {
+      Navigator.pop(context);
     }
   }
 
@@ -3434,27 +3135,6 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
               ),
             ),
             const SizedBox(height: 18),
-
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Tampilkan di Story',
-                style: TextStyle(color: navy, fontWeight: FontWeight.w800),
-              ),
-              subtitle: const Text(
-                'Status ini akan tampil di Story.',
-                style: TextStyle(color: softText, fontSize: 12),
-              ),
-              value: publishAsStatus,
-              activeThumbColor: premiumBlue,
-              onChanged: (value) {
-                setState(() {
-                  publishAsStatus = value;
-                });
-              },
-            ),
-
-            const SizedBox(height: 8),
 
             TextField(
               controller: textController,
@@ -4523,11 +4203,8 @@ class _ProfilePageState extends State<ProfilePage> {
       final cloudName = '${user['name'] ?? ''}'.trim();
       final cloudUsername = '${user['username'] ?? ''}'.trim();
       final cloudBio = '${user['bio'] ?? ''}';
-      final cloudPhotoRaw = '${user['photo_url'] ?? ''}'.trim();
-      final cloudBackgroundRaw = '${user['background_url'] ?? ''}'.trim();
-
-      final cloudPhoto = cloudPhotoRaw;
-      final cloudBackground = cloudBackgroundRaw;
+      final cloudPhoto = '${user['photo_url'] ?? ''}'.trim();
+      final cloudBackground = '${user['background_url'] ?? ''}'.trim();
       final cloudVerifiedBadge = '${user['verified_badge'] ?? ''}'
           .trim()
           .toLowerCase();

@@ -636,38 +636,6 @@ class BloomApi {
       throw Exception('API gagal menghapus Moment.');
     }
   }
-
-  static Future<Map<String, dynamic>> updateProfileStatus({
-    required String userId,
-    required String text,
-    String mediaUrl = '',
-    String mediaType = '',
-  }) async {
-    final response = await http.put(
-      Uri.parse('${BloomApi.baseUrl}/api/profile/status'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user_id': userId,
-        'text': text,
-        'media_url': mediaUrl,
-        'media_type': mediaType,
-      }),
-    );
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'profile_status_http_${response.statusCode}: ${response.body}',
-      );
-    }
-
-    final data = jsonDecode(response.body);
-
-    if (data is! Map || data['ok'] != true) {
-      throw Exception('profile_status_update_failed');
-    }
-
-    return Map<String, dynamic>.from(data);
-  }
 }
 
 class BloomApp extends StatelessWidget {
@@ -1476,7 +1444,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
       if (!mounted) return;
 
       setState(() {
-        posts = []; // BLOOM: kosongkan seluruh status di Beranda
+        posts = remotePosts;
       });
 
       debugPrint('[BLOOM API] ${remotePosts.length} Moment dimuat dari D1.');
@@ -1957,12 +1925,328 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   ),
                 ),
               ),
+              _PostCard(
+                name: 'Ayie',
+                letter: 'A',
+                text:
+                    'Hari ini terasa sederhana, tapi justru hal-hal kecil seperti ini yang ingin aku simpan. ✨',
+                mood: 'Feeling peaceful',
+                location: 'Bandung',
+                createdAt: DateTime(2026, 8, 28, 9, 0),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-ayie'),
+              ),
+              const SizedBox(height: 16),
+              _PostCard(
+                name: 'BLOOM',
+                letter: 'B',
+                text:
+                    'Selamat datang di BLOOM — tempat menyimpan momen yang benar-benar berarti.',
+                mood: 'Feeling grateful',
+                location: 'BLOOM',
+                createdAt: DateTime(2026, 8, 28, 8, 30),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-bloom'),
+              ),
             ]),
           ),
         ),
       ],
     );
   }
+}
+
+class _StoryRow extends StatefulWidget {
+  const _StoryRow();
+
+  @override
+  State<_StoryRow> createState() => _StoryRowState();
+}
+
+class _StoryRowState extends State<_StoryRow> {
+  List<Map<String, dynamic>> statuses = [];
+  bool loading = true;
+  String? _myUserId;
+  String? _myProfilePhoto;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatuses();
+  }
+
+  Future<void> _loadStatuses() async {
+    try {
+      final userId = await BloomApi.getUserId();
+      final prefs = await SharedPreferences.getInstance();
+
+      _myUserId = userId;
+      _myProfilePhoto = prefs.getString('bloom_profile_photo')?.trim();
+
+      if (_myProfilePhoto != null && _myProfilePhoto!.isEmpty) {
+        _myProfilePhoto = null;
+      }
+
+      debugPrint('[BLOOM STATUS DEBUG] userId=$userId');
+
+      if (userId == null || userId.isEmpty) {
+        if (mounted) {
+          setState(() {
+            loading = false;
+          });
+        }
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(
+          '${BloomApi.baseUrl}/api/status/feed?user_id=${Uri.encodeQueryComponent(userId)}',
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('status_feed_http_${response.statusCode}');
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data is! Map || data['ok'] != true) {
+        throw Exception('status_feed_invalid_response');
+      }
+
+      final rawStatuses = data['statuses'];
+
+      final loaded = <Map<String, dynamic>>[];
+
+      if (rawStatuses is List) {
+        for (final item in rawStatuses) {
+          if (item is Map) {
+            final text = '${item['text'] ?? ''}'.trim();
+            final mediaUrl = '${item['media_url'] ?? ''}'.trim();
+
+            if (text.isEmpty && mediaUrl.isEmpty) continue;
+
+            loaded.add({
+              'user_id': '${item['user_id'] ?? ''}',
+              'name': '${item['name'] ?? ''}'.trim(),
+              'username': '${item['username'] ?? ''}'.trim(),
+              'photo_url': '${item['photo_url'] ?? ''}'.trim(),
+              'media_url': '${item['media_url'] ?? ''}'.trim(),
+              'media_type': '${item['media_type'] ?? ''}'.trim(),
+              'text': text,
+              'updated_at': item['updated_at'],
+            });
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        statuses = loaded;
+        loading = false;
+      });
+    } catch (e) {
+      debugPrint('[BLOOM STATUS FEED] Load failed: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const SizedBox(
+        height: 92,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    if (statuses.isEmpty) {
+      return const SizedBox(
+        height: 92,
+        child: Center(
+          child: Text(
+            'Belum ada status',
+            style: TextStyle(
+              color: softText,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 112,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: statuses.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 15),
+        itemBuilder: (_, index) {
+          final status = statuses[index];
+
+          final name = status['name'] as String? ?? '';
+          final username = status['username'] as String? ?? '';
+          final photoUrl = status['photo_url'] as String? ?? '';
+          final mediaUrl = status['media_url'] as String? ?? '';
+
+          final statusUserId = '${status['user_id'] ?? ''}'.trim();
+          final isMyStatus =
+              _myUserId != null &&
+              _myUserId!.isNotEmpty &&
+              statusUserId == _myUserId;
+
+          final profileImageUrl =
+              isMyStatus && _myProfilePhoto != null
+                  ? _myProfilePhoto!
+                  : photoUrl;
+          final mediaType = status['media_type'] as String? ?? '';
+          final text = status['text'] as String? ?? '';
+
+          // Baris Story selalu memakai FOTO PROFIL.
+          // Media Story hanya ditampilkan di viewer saat Story dibuka.
+          final storyImageUrl = profileImageUrl;
+
+          final displayName = name.isNotEmpty
+              ? name
+              : (username.isNotEmpty ? username : 'BLOOM');
+
+          debugPrint(
+            '[BLOOM STATUS PHOTO DEBUG] '
+            'name=$displayName photoUrl=$photoUrl '
+            'mediaUrl=$mediaUrl mediaType=$mediaType',
+          );
+
+          return GestureDetector(
+            onTap: () => _openBloomStory(context, status),
+            child: SizedBox(
+              width: 78,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: premiumBlue,
+                    ),
+                    child: ClipOval(
+                      child: storyImageUrl.isNotEmpty
+                          ? Image.network(
+                              storyImageUrl,
+                              width: 58,
+                              height: 58,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    width: 58,
+                                    height: 58,
+                                    color: lightBlue,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      displayName.isNotEmpty
+                                          ? displayName[0].toUpperCase()
+                                          : 'B',
+                                      style: const TextStyle(
+                                        color: premiumBlue,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                            )
+                          : Container(
+                              width: 58,
+                              height: 58,
+                              color: lightBlue,
+                              alignment: Alignment.center,
+                              child: Text(
+                                displayName.isNotEmpty
+                                    ? displayName[0].toUpperCase()
+                                    : 'B',
+                                style: const TextStyle(
+                                  color: premiumBlue,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: navy,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: softText,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+Future<void> _openBloomStory(
+  BuildContext context,
+  Map<String, dynamic> status,
+) async {
+  final mediaUrl = '${status['media_url'] ?? ''}'.trim();
+  final mediaType = '${status['media_type'] ?? ''}'.trim();
+  final text = '${status['text'] ?? ''}'.trim();
+  final name = '${status['name'] ?? ''}'.trim();
+  final username = '${status['username'] ?? ''}'.trim();
+
+  final displayName = name.isNotEmpty
+      ? name
+      : (username.isNotEmpty ? username : 'BLOOM');
+
+  if (mediaUrl.isEmpty && text.isEmpty) return;
+
+  await Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _BloomStoryViewer(
+        displayName: displayName,
+        mediaUrl: mediaUrl,
+        mediaType: mediaType,
+        text: text,
+      ),
+    ),
+  );
 }
 
 class _BloomStoryViewer extends StatefulWidget {
@@ -2000,28 +2284,25 @@ class _BloomStoryViewerState extends State<_BloomStoryViewer> {
         Uri.parse(widget.mediaUrl),
       );
 
-      _videoController!
-          .initialize()
-          .then((_) {
-            if (!mounted) return;
+      _videoController!.initialize().then((_) {
+        if (!mounted) return;
 
-            setState(() {
-              _videoReady = true;
-            });
+        setState(() {
+          _videoReady = true;
+        });
 
-            _videoController!
-              ..setLooping(true)
-              ..play();
-          })
-          .catchError((error) {
-            debugPrint('[BLOOM STORY VIDEO] $error');
+        _videoController!
+          ..setLooping(true)
+          ..play();
+      }).catchError((error) {
+        debugPrint('[BLOOM STORY VIDEO] $error');
 
-            if (!mounted) return;
+        if (!mounted) return;
 
-            setState(() {
-              _videoReady = false;
-            });
-          });
+        setState(() {
+          _videoReady = false;
+        });
+      });
     }
   }
 
@@ -2045,8 +2326,8 @@ class _BloomStoryViewerState extends State<_BloomStoryViewer> {
                 child: !hasMedia
                     ? _textStory()
                     : _isVideo
-                    ? _buildVideo()
-                    : _buildImage(),
+                        ? _buildVideo()
+                        : _buildImage(),
               ),
             ),
 
@@ -2124,17 +2405,23 @@ class _BloomStoryViewerState extends State<_BloomStoryViewer> {
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
 
-        return const CircularProgressIndicator(color: Colors.white);
+        return const CircularProgressIndicator(
+          color: Colors.white,
+        );
       },
       errorBuilder: (_, _, _) {
-        return _textStory(fallback: 'Foto Story tidak dapat ditampilkan.');
+        return _textStory(
+          fallback: 'Foto Story tidak dapat ditampilkan.',
+        );
       },
     );
   }
 
   Widget _buildVideo() {
     if (!_videoReady || _videoController == null) {
-      return const CircularProgressIndicator(color: Colors.white);
+      return const CircularProgressIndicator(
+        color: Colors.white,
+      );
     }
 
     return AspectRatio(
@@ -2144,9 +2431,8 @@ class _BloomStoryViewerState extends State<_BloomStoryViewer> {
   }
 
   Widget _textStory({String? fallback}) {
-    final content = widget.text.isNotEmpty
-        ? widget.text
-        : (fallback ?? 'BLOOM');
+    final content =
+        widget.text.isNotEmpty ? widget.text : (fallback ?? 'BLOOM');
 
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -2184,231 +2470,6 @@ String _formatBloomDateTime(DateTime dateTime) {
   final minute = local.minute.toString().padLeft(2, '0');
 
   return '$day/$month/$year • $hour:$minute';
-}
-
-class _StoryRow extends StatefulWidget {
-  const _StoryRow();
-
-  @override
-  State<_StoryRow> createState() => _StoryRowState();
-}
-
-class _StoryRowState extends State<_StoryRow> {
-  List<Map<String, dynamic>> statuses = [];
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadStatuses();
-  }
-
-  Future<void> _loadStatuses() async {
-    try {
-      final userId = await BloomApi.getUserId();
-
-      if (userId == null || userId.isEmpty) {
-        if (mounted) {
-          setState(() {
-            loading = false;
-          });
-        }
-        return;
-      }
-
-      final response = await http.get(
-        Uri.parse(
-          '${BloomApi.baseUrl}/api/status/feed?user_id=${Uri.encodeQueryComponent(userId)}',
-        ),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('status_feed_http_${response.statusCode}');
-      }
-
-      final data = jsonDecode(response.body);
-
-      if (data is! Map || data['ok'] != true) {
-        throw Exception('status_feed_invalid_response');
-      }
-
-      final rawStatuses = data['statuses'];
-
-      final loaded = <Map<String, dynamic>>[];
-
-      if (rawStatuses is List) {
-        for (final item in rawStatuses) {
-          if (item is Map) {
-            final text = '${item['text'] ?? ''}'.trim();
-
-            if (text.isEmpty) continue;
-
-            loaded.add({
-              'user_id': '${item['user_id'] ?? ''}',
-              'name': '${item['name'] ?? ''}'.trim(),
-              'username': '${item['username'] ?? ''}'.trim(),
-              'photo_url': '${item['photo_url'] ?? ''}'.trim(),
-              'text': text,
-              'updated_at': item['updated_at'],
-            });
-          }
-        }
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        statuses = loaded;
-        loading = false;
-      });
-    } catch (e) {
-      debugPrint('[BLOOM STATUS FEED] Load failed: $e');
-
-      if (!mounted) return;
-
-      setState(() {
-        loading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const SizedBox(
-        height: 92,
-        child: Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-
-    if (statuses.isEmpty) {
-      return const SizedBox(
-        height: 92,
-        child: Center(
-          child: Text(
-            'Belum ada status',
-            style: TextStyle(
-              color: softText,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 112,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        itemCount: statuses.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 15),
-        itemBuilder: (_, index) {
-          final status = statuses[index];
-
-          final name = status['name'] as String? ?? '';
-          final username = status['username'] as String? ?? '';
-          final photoUrl = status['photo_url'] as String? ?? '';
-          final text = status['text'] as String? ?? '';
-
-          final displayName = name.isNotEmpty
-              ? name
-              : (username.isNotEmpty ? username : 'BLOOM');
-
-          return GestureDetector(
-            onTap: () {},
-            child: SizedBox(
-              width: 78,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: premiumBlue,
-                    ),
-                    child: ClipOval(
-                      child: photoUrl.isNotEmpty
-                          ? Image.network(
-                              photoUrl,
-                              width: 58,
-                              height: 58,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    width: 58,
-                                    height: 58,
-                                    color: lightBlue,
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      displayName.isNotEmpty
-                                          ? displayName[0].toUpperCase()
-                                          : 'B',
-                                      style: const TextStyle(
-                                        color: premiumBlue,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                            )
-                          : Container(
-                              width: 58,
-                              height: 58,
-                              color: lightBlue,
-                              alignment: Alignment.center,
-                              child: Text(
-                                displayName.isNotEmpty
-                                    ? displayName[0].toUpperCase()
-                                    : 'B',
-                                style: const TextStyle(
-                                  color: premiumBlue,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: navy,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: softText,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
 
 class _PostCard extends StatefulWidget {
@@ -3157,36 +3218,6 @@ class BloomVoiceRecorder {
   Future<void> dispose() async {
     await recorder.dispose();
   }
-
-  static Future<Map<String, dynamic>> updateProfileStatus({
-    required String userId,
-    required String text,
-    String mediaUrl = '',
-    String mediaType = '',
-  }) async {
-    final response = await http.put(
-      Uri.parse('${BloomApi.baseUrl}/api/profile/status'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user_id': userId,
-        'text': text.trim(),
-        'media_url': mediaUrl,
-        'media_type': mediaType,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('profile_status_http_${response.statusCode}');
-    }
-
-    final data = jsonDecode(response.body);
-
-    if (data is! Map || data['ok'] != true) {
-      throw Exception('profile_status_invalid_response');
-    }
-
-    return Map<String, dynamic>.from(data);
-  }
 }
 
 class CreateBloomSheet extends StatefulWidget {
@@ -3217,7 +3248,6 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
   String? listening;
   bool recording = false;
   bool publishing = false;
-  bool publishAsStatus = false;
 
   @override
   void dispose() {
@@ -3361,57 +3391,17 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
 
     setState(() => publishing = true);
 
-    try {
-      if (publishAsStatus) {
-        if (text.isEmpty) {
-          throw Exception('Status Story membutuhkan teks.');
-        }
+    await widget.onCreate?.call(
+      text: text,
+      image: image,
+      video: video,
+      location: location,
+      voicePath: voicePath,
+      listening: listening,
+    );
 
-        final userId = await BloomApi.getUserId();
-
-        if (userId == null || userId.isEmpty) {
-          throw Exception('user_id_required');
-        }
-
-        await BloomApi.updateProfileStatus(userId: userId, text: text);
-
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Status berhasil dikirim ke Story.')),
-        );
-
-        Navigator.pop(context);
-        return;
-      }
-
-      await widget.onCreate?.call(
-        text: text,
-        image: image,
-        video: video,
-        location: location,
-        voicePath: voicePath,
-        listening: listening,
-      );
-
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal mengirim: '
-            '${e.toString().replaceFirst('Exception: ', '')}',
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => publishing = false);
-      }
+    if (mounted) {
+      Navigator.pop(context);
     }
   }
 
@@ -3434,27 +3424,6 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
               ),
             ),
             const SizedBox(height: 18),
-
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Tampilkan di Story',
-                style: TextStyle(color: navy, fontWeight: FontWeight.w800),
-              ),
-              subtitle: const Text(
-                'Status ini akan tampil di Story.',
-                style: TextStyle(color: softText, fontSize: 12),
-              ),
-              value: publishAsStatus,
-              activeThumbColor: premiumBlue,
-              onChanged: (value) {
-                setState(() {
-                  publishAsStatus = value;
-                });
-              },
-            ),
-
-            const SizedBox(height: 8),
 
             TextField(
               controller: textController,

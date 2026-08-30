@@ -1,0 +1,578 @@
+class BloomHomePage extends StatefulWidget {
+  const BloomHomePage({super.key});
+
+  @override
+  State<BloomHomePage> createState() => _BloomHomePageState();
+}
+
+class _BloomHomePageState extends State<BloomHomePage> {
+  List<BloomPost> posts = [];
+  XFile? newMedia;
+
+  bool _searching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  List<BloomPost> get _filteredPosts {
+    final query = _searchQuery.trim().toLowerCase();
+
+    if (query.isEmpty) return posts;
+
+    return posts.where((post) {
+      return post.name.toLowerCase().contains(query) ||
+          post.text.toLowerCase().contains(query) ||
+          post.mood.toLowerCase().contains(query) ||
+          post.location.toLowerCase().contains(query);
+    }).toList();
+  }
+
+  void _openSearch() {
+    setState(() {
+      _searching = true;
+    });
+  }
+
+  void _closeSearch() {
+    _searchController.clear();
+
+    setState(() {
+      _searching = false;
+      _searchQuery = '';
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPosts();
+  }
+
+  Future<void> _loadPosts() async {
+    try {
+      // D1/server menjadi sumber utama Moment Beranda.
+      final remotePosts = await BloomApi.loadPosts();
+
+      // Simpan hasil server sebagai cache lokal.
+      await BloomStore.savePosts(remotePosts);
+
+      if (!mounted) return;
+
+      setState(() {
+        posts = []; // BLOOM: kosongkan seluruh status di Beranda
+      });
+
+      debugPrint('[BLOOM API] ${remotePosts.length} Moment dimuat dari D1.');
+    } catch (e) {
+      // Jika server tidak tersedia, gunakan cache lokal.
+      debugPrint('[BLOOM API] Load D1 gagal: $e');
+
+      final localPosts = await BloomStore.loadPosts();
+
+      if (!mounted) return;
+
+      setState(() {
+        posts = localPosts;
+      });
+    }
+  }
+
+  Future<void> _addThought(String thought) async {
+    final post = BloomPost(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: 'Ayie',
+      text: thought.trim(),
+      mood: 'Feeling thoughtful',
+      location: 'BLOOM',
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      final remotePost = await BloomApi.createPost(text: post.text);
+
+      // Simpan hasil dari server ke lokal sebagai cache.
+      await BloomStore.addPost(remotePost);
+
+      debugPrint('[BLOOM API] Moment berhasil dikirim ke D1.');
+    } catch (e) {
+      // API gagal -> tetap simpan lokal agar Moment tidak hilang.
+      await BloomStore.addPost(post);
+
+      debugPrint('[BLOOM API] Gagal kirim Moment ke D1: $e');
+    }
+
+    await _loadPosts();
+  }
+
+  Future<void> _addUnifiedBloom({
+    String text = '',
+    XFile? image,
+    XFile? video,
+    String? location,
+    String? voicePath,
+    String? listening,
+  }) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final mediaDir = Directory('${appDir.path}/bloom_media');
+
+    if (!await mediaDir.exists()) {
+      await mediaDir.create(recursive: true);
+    }
+
+    String? savedImagePath;
+    String? savedVideoPath;
+
+    if (image != null) {
+      final ext = image.path.contains('.') ? image.path.split('.').last : 'jpg';
+
+      final path =
+          '${mediaDir.path}/${DateTime.now().microsecondsSinceEpoch}_image.$ext';
+
+      savedImagePath = (await File(image.path).copy(path)).path;
+    }
+
+    if (video != null) {
+      final ext = video.path.contains('.') ? video.path.split('.').last : 'mp4';
+
+      final path =
+          '${mediaDir.path}/${DateTime.now().microsecondsSinceEpoch}_video.$ext';
+
+      savedVideoPath = (await File(video.path).copy(path)).path;
+    }
+
+    final post = BloomPost(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: 'Ayie',
+      text: text.trim(),
+      mood: listening != null ? 'Listening $listening' : 'New Bloom',
+      location: location ?? 'BLOOM',
+      imagePath: savedImagePath,
+      videoPath: savedVideoPath,
+      voicePath: voicePath,
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      final remotePost = await BloomApi.createPost(
+        text: post.text,
+        location: location,
+        activity: listening,
+      );
+
+      final syncedPost = post.copyWith(
+        id: remotePost.id,
+        text: remotePost.text,
+        mood: remotePost.mood,
+        location: remotePost.location,
+        createdAt: remotePost.createdAt,
+      );
+
+      await BloomStore.addPost(syncedPost);
+
+      debugPrint(
+        '[BLOOM API] Unified Moment + metadata berhasil dikirim ke D1.',
+      );
+    } catch (e) {
+      await BloomStore.addPost(post);
+
+      debugPrint('[BLOOM API] Gagal kirim Unified Moment ke D1: $e');
+    }
+
+    await _loadPosts();
+  }
+
+  Future<void> _editPost(BloomPost post) async {
+    final controller = TextEditingController(text: post.text);
+
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Edit status',
+          style: TextStyle(color: navy, fontWeight: FontWeight.w900),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 5,
+          decoration: InputDecoration(
+            hintText: 'Tulis keterangan status...',
+            filled: true,
+            fillColor: lightBlue,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal', style: TextStyle(color: softText)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: premiumBlue),
+            onPressed: () {
+              Navigator.pop(context, controller.text.trim());
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (edited == null) return;
+
+    try {
+      final remotePost = await BloomApi.updatePost(
+        id: post.id,
+        text: edited,
+        location: post.location == 'BLOOM' ? '' : post.location,
+        activity: post.mood == 'New Bloom' ? '' : post.mood,
+      );
+
+      final updatedPost = post.copyWith(
+        text: remotePost.text,
+        mood: remotePost.mood,
+        location: remotePost.location,
+        createdAt: remotePost.createdAt,
+      );
+
+      await BloomStore.updatePost(updatedPost);
+
+      debugPrint('[BLOOM API] Moment berhasil diperbarui di D1.');
+    } catch (e) {
+      debugPrint('[BLOOM API] Gagal update Moment di D1: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Moment gagal diperbarui ke server.')),
+      );
+    }
+
+    await _loadPosts();
+  }
+
+  Future<void> _deletePost(BloomPost post) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Hapus status?',
+          style: TextStyle(color: navy, fontWeight: FontWeight.w900),
+        ),
+        content: const Text(
+          'Status ini akan dihapus dari BLOOM.',
+          style: TextStyle(color: softText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal', style: TextStyle(color: softText)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: premiumBlue),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await BloomApi.deletePost(post.id);
+      await BloomStore.deletePost(post.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        posts.removeWhere((item) => item.id == post.id);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Status berhasil dihapus.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      debugPrint('[BLOOM API] Moment berhasil dihapus dari D1.');
+    } catch (e) {
+      debugPrint('[BLOOM API] Gagal menghapus Moment dari D1: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Moment gagal dihapus dari server.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> createThought() async {
+    final thought = await showDialog<String>(
+      context: context,
+      builder: (_) => const ThoughtDialog(),
+    );
+
+    if (thought != null && thought.trim().isNotEmpty) {
+      await _addThought(thought);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          pinned: true,
+          backgroundColor: Colors.white,
+          title: _searching
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                  style: const TextStyle(
+                    color: navy,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Cari Moment...',
+                    border: InputBorder.none,
+                  ),
+                )
+              : const Text(
+                  'BLOOM',
+                  style: TextStyle(
+                    color: premiumBlue,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
+                ),
+          actions: [
+            IconButton(
+              tooltip: _searching ? 'Tutup pencarian' : 'Cari Moment',
+              onPressed: _searching ? _closeSearch : _openSearch,
+              icon: Icon(
+                _searching ? Icons.close_rounded : Icons.search_rounded,
+                color: navy,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              const Text(
+                'Good evening',
+                style: TextStyle(color: softText, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Apa kabarmu hari ini?',
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // BLOOM PREMIUM LIQUID FLOW
+              Container(
+                height: 112,
+                width: double.infinity,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF003B73),
+                      Color(0xFF1976D2),
+                      Color(0xFFDCEEFF),
+                    ],
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33063B78),
+                      blurRadius: 20,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(painter: BloomFlowPainter()),
+                    ),
+                    const Positioned(
+                      left: 20,
+                      top: 18,
+                      child: Text(
+                        'MOMENTS',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 20,
+                      top: 42,
+                      child: Text(
+                        'Stay connected.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 21,
+                      top: 75,
+                      child: Text(
+                        'Without the noise.',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              const SizedBox(height: 20),
+              if (_searching && _searchQuery.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Text(
+                    '${_filteredPosts.length} Moment ditemukan',
+                    style: const TextStyle(
+                      color: softText,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              if (_searching &&
+                  _searchQuery.trim().isNotEmpty &&
+                  _filteredPosts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 48,
+                          color: softText,
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Moment tidak ditemukan',
+                          style: TextStyle(
+                            color: navy,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Coba kata kunci lain.',
+                          style: TextStyle(color: softText),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ..._filteredPosts.map(
+                (post) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _PostCard(
+                    name: post.name,
+                    letter: post.name.isNotEmpty ? post.name[0] : 'A',
+                    text: post.text,
+                    mood: post.mood,
+                    location: post.location,
+                    imagePath: post.imagePath,
+                    videoPath: post.videoPath,
+                    voicePath: post.voicePath,
+                    listening: post.listening,
+                    createdAt: post.createdAt,
+                    initiallyLiked: post.liked,
+                    initiallyBookmarked: post.bookmarked,
+                    onEdit: () => _editPost(post),
+                    onDelete: () => _deletePost(post),
+                    onLikeChanged: (value) async {
+                      post.liked = value;
+                      await BloomStore.updatePost(post);
+                    },
+                    onBookmarkChanged: (value) async {
+                      post.bookmarked = value;
+                      await BloomStore.updatePost(post);
+                    },
+                    onComment: () =>
+                        _showBloomComments(context, postId: post.id),
+                  ),
+                ),
+              ),
+              _PostCard(
+                name: 'Ayie',
+                letter: 'A',
+                text:
+                    'Hari ini terasa sederhana, tapi justru hal-hal kecil seperti ini yang ingin aku simpan. ✨',
+                mood: 'Feeling peaceful',
+                location: 'Bandung',
+                createdAt: DateTime(2026, 8, 28, 9, 0),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-ayie'),
+              ),
+              const SizedBox(height: 16),
+              _PostCard(
+                name: 'BLOOM',
+                letter: 'B',
+                text:
+                    'Selamat datang di BLOOM — tempat menyimpan momen yang benar-benar berarti.',
+                mood: 'Feeling grateful',
+                location: 'BLOOM',
+                createdAt: DateTime(2026, 8, 28, 8, 30),
+                onComment: () =>
+                    _showBloomComments(context, postId: 'demo-bloom'),
+              ),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
