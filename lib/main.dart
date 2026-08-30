@@ -5420,48 +5420,50 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ClipOval(
-                                child: profilePhotoPath != null &&
-                                        profilePhotoPath!.trim().isNotEmpty
-                                    ? (profilePhotoPath!.startsWith('http')
-                                        ? Image.network(
-                                            profilePhotoPath!,
-                                            width: 52,
-                                            height: 52,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (_, error, stackTrace) => Container(
+                              SizedBox(
+                                width: 52,
+                                height: 52,
+                                child: ClipOval(
+                                  child: profilePhotoPath != null &&
+                                          profilePhotoPath!.trim().isNotEmpty
+                                      ? (profilePhotoPath!.startsWith('http')
+                                          ? Image.network(
+                                              profilePhotoPath!,
                                               width: 52,
                                               height: 52,
-                                              color: lightBlue,
-                                              child: const Icon(
-                                                Icons.person_rounded,
-                                                color: premiumBlue,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (_, error, stackTrace) =>
+                                                      Container(
+                                                color: lightBlue,
+                                                alignment: Alignment.center,
+                                                child: const Icon(
+                                                  Icons.person_rounded,
+                                                  color: premiumBlue,
+                                                ),
                                               ),
+                                            )
+                                          : Image.file(
+                                              File(profilePhotoPath!),
+                                              width: 52,
+                                              height: 52,
+                                              fit: BoxFit.cover,
+                                            ))
+                                      : Container(
+                                          color: lightBlue,
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            name.isNotEmpty
+                                                ? name[0].toUpperCase()
+                                                : 'B',
+                                            style: const TextStyle(
+                                              color: premiumBlue,
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 20,
                                             ),
-                                          )
-                                        : Image.file(
-                                            File(profilePhotoPath!),
-                                            width: 52,
-                                            height: 52,
-                                            fit: BoxFit.cover,
-                                          ))
-                                    : Container(
-                                        width: 52,
-                                        height: 52,
-                                        color: lightBlue,
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          name.isNotEmpty
-                                              ? name[0].toUpperCase()
-                                              : 'B',
-                                          style: const TextStyle(
-                                            color: premiumBlue,
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 20,
                                           ),
                                         ),
-                                      ),
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
