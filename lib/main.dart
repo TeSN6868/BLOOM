@@ -1925,29 +1925,6 @@ class _BloomHomePageState extends State<BloomHomePage> {
                   ),
                 ),
               ),
-              _PostCard(
-                name: 'Ayie',
-                letter: 'A',
-                text:
-                    'Hari ini terasa sederhana, tapi justru hal-hal kecil seperti ini yang ingin aku simpan. ✨',
-                mood: 'Feeling peaceful',
-                location: 'Bandung',
-                createdAt: DateTime(2026, 8, 28, 9, 0),
-                onComment: () =>
-                    _showBloomComments(context, postId: 'demo-ayie'),
-              ),
-              const SizedBox(height: 16),
-              _PostCard(
-                name: 'BLOOM',
-                letter: 'B',
-                text:
-                    'Selamat datang di BLOOM — tempat menyimpan momen yang benar-benar berarti.',
-                mood: 'Feeling grateful',
-                location: 'BLOOM',
-                createdAt: DateTime(2026, 8, 28, 8, 30),
-                onComment: () =>
-                    _showBloomComments(context, postId: 'demo-bloom'),
-              ),
             ]),
           ),
         ),
