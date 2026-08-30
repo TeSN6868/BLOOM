@@ -4466,12 +4466,12 @@ class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'DAILY RHYTHM',
+                  'DAILY BLOOM',
                   style: TextStyle(
                     color: navy,
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 0.8,
+                    letterSpacing: 1.1,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -4486,7 +4486,7 @@ class _BloomDailyRhythmState extends State<BloomDailyRhythm> {
                 const SizedBox(height: 2),
                 Text(
                   rhythm['message'] as String,
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: softText,
