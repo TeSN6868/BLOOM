@@ -4546,8 +4546,6 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadProfile();
-    _loadProfileStats();
-    _loadMyStatus();
   }
 
   Future<void> _loadCloudProfile() async {
