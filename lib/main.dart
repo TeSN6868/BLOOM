@@ -1476,7 +1476,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
       if (!mounted) return;
 
       setState(() {
-        posts = []; // BLOOM: kosongkan seluruh status di Beranda
+        posts = remotePosts;
       });
 
       debugPrint('[BLOOM API] ${remotePosts.length} Moment dimuat dari D1.');
@@ -1883,6 +1883,31 @@ class _BloomHomePageState extends State<BloomHomePage> {
 
               const SizedBox(height: 16),
 
+              // BLOOM HOME: STORY / STATUS FEED
+              const Text(
+                'Story',
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              const _StoryRow(),
+
+              const SizedBox(height: 22),
+
+              const Text(
+                'Status',
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+
               const SizedBox(height: 20),
               if (_searching && _searchQuery.trim().isNotEmpty)
                 Padding(
@@ -2193,7 +2218,6 @@ class _StoryRow extends StatefulWidget {
   State<_StoryRow> createState() => _StoryRowState();
 }
 
-Widget _storyInitial(String displayName) {
   return Container(
     width: 58,
     height: 58,
