@@ -380,6 +380,7 @@ class BloomApi {
       return null;
     }
 
+    debugPrint('[BLOOM DEBUG] LOCAL USER ID = ${id.trim()}');
     return id.trim();
   }
 
