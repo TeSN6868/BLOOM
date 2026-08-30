@@ -2094,7 +2094,10 @@ class _StoryRowState extends State<_StoryRow> {
           final mediaUrl = status['media_url'] as String? ?? '';
           final mediaType = status['media_type'] as String? ?? '';
           final text = status['text'] as String? ?? '';
-          final storyImageUrl = mediaUrl.isNotEmpty ? mediaUrl : photoUrl;
+
+          // Baris Story selalu memakai FOTO PROFIL.
+          // Media Story hanya ditampilkan di viewer saat Story dibuka.
+          final storyImageUrl = photoUrl;
 
           final displayName = name.isNotEmpty
               ? name
