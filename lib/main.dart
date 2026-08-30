@@ -5405,6 +5405,113 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 18),
 
                     // =========================
+                    // BLOOM PROFILE STATUS / STORY
+                    // =========================
+                    if (myStatus.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.90),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: premiumBlue.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipOval(
+                                child: profilePhotoPath != null &&
+                                        profilePhotoPath!.trim().isNotEmpty
+                                    ? (profilePhotoPath!.startsWith('http')
+                                        ? Image.network(
+                                            profilePhotoPath!,
+                                            width: 52,
+                                            height: 52,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (_, error, stackTrace) => Container(
+                                              width: 52,
+                                              height: 52,
+                                              color: lightBlue,
+                                              child: const Icon(
+                                                Icons.person_rounded,
+                                                color: premiumBlue,
+                                              ),
+                                            ),
+                                          )
+                                        : Image.file(
+                                            File(profilePhotoPath!),
+                                            width: 52,
+                                            height: 52,
+                                            fit: BoxFit.cover,
+                                          ))
+                                    : Container(
+                                        width: 52,
+                                        height: 52,
+                                        color: lightBlue,
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          name.isNotEmpty
+                                              ? name[0].toUpperCase()
+                                              : 'B',
+                                          style: const TextStyle(
+                                            color: premiumBlue,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(
+                                            color: navy,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '@$username',
+                                          style: const TextStyle(
+                                            color: softText,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      myStatus,
+                                      style: const TextStyle(
+                                        color: navy,
+                                        fontSize: 14,
+                                        height: 1.35,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 18),
+
+                    // =========================
                     // BLOOM DAILY RHYTHM
                     // =========================
                     const Padding(
