@@ -296,6 +296,46 @@ export default {
       }, 201);
     }
 
+    // =========================
+    // DEBUG USER PHOTO
+    // =========================
+    if (request.method === "GET" && url.pathname === "/api/debug/user") {
+      const username = String(
+        url.searchParams.get("username") ?? ""
+      ).trim().toLowerCase();
+
+      if (!username) {
+        return json({
+          ok: false,
+          error: "username_required"
+        }, 400);
+      }
+
+      const user = await env.DB.prepare(`
+        SELECT id, name, username, photo_url
+        FROM users
+        WHERE username = ?
+        LIMIT 1
+      `).bind(username).first();
+
+      if (!user) {
+        return json({
+          ok: false,
+          error: "user_not_found"
+        }, 404);
+      }
+
+      return json({
+        ok: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          photo_url: user.photo_url ?? ""
+        }
+      });
+    }
+
     if (request.method === "POST" && url.pathname === "/api/login") {
       const body = await request.json();
 
