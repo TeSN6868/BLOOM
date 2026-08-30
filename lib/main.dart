@@ -4540,6 +4540,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String myStatus = '';
 
   String? profilePhotoPath;
+  String? statusPhotoUrl;
   String? backgroundPhotoPath;
 
   @override
@@ -4608,6 +4609,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
         if (cloudPhoto.isNotEmpty) {
           profilePhotoPath = cloudPhoto;
+          statusPhotoUrl = cloudPhoto;
         }
 
         if (cloudBackground.isNotEmpty) {
