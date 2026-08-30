@@ -1444,7 +1444,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
       if (!mounted) return;
 
       setState(() {
-        posts = remotePosts;
+        posts = []; // BLOOM: kosongkan seluruh status di Beranda
       });
 
       debugPrint('[BLOOM API] ${remotePosts.length} Moment dimuat dari D1.');
