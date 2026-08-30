@@ -10,6 +10,15 @@ export default {
       });
     }
 
+    if (request.method === "GET" && url.pathname === "/api/debug/deploy") {
+      return json({
+        ok: true,
+        debug: "deploy-925ed0b",
+        worker: "bloom-api",
+        time: Date.now()
+      });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/posts") {
       const userId = url.searchParams.get("user_id");
 
