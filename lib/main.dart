@@ -5208,7 +5208,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: hasProfilePhoto
                                   ? profilePhotoPath!.startsWith('http')
                                         ? Image.network(
-                                            profilePhotoPath!,
+                                            '${profilePhotoPath!}${profilePhotoPath!.contains('?') ? '&' : '?'}profile_status=1',
                                             width: 116,
                                             height: 116,
                                             fit: BoxFit.cover,
