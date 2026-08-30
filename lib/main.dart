@@ -2268,6 +2268,13 @@ class _StoryRowState extends State<_StoryRow> {
 
             if (text.isEmpty) continue;
 
+            debugPrint(
+              '[BLOOM STATUS PHOTO] '
+              'name=${item['name']} '
+              'username=${item['username']} '
+              'photo_url=${item['photo_url']}',
+            );
+
             loaded.add({
               'user_id': '${item['user_id'] ?? ''}',
               'name': '${item['name'] ?? ''}'.trim(),
