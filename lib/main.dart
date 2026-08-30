@@ -688,7 +688,6 @@ class _BloomAuthGateState extends State<BloomAuthGate> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -1435,13 +1434,32 @@ class _BloomHomePageState extends State<BloomHomePage> {
   }
 
   Future<void> _loadPosts() async {
-    final loaded = await BloomStore.loadPosts();
+    try {
+      // D1/server menjadi sumber utama Moment Beranda.
+      final remotePosts = await BloomApi.loadPosts();
 
-    if (!mounted) return;
+      // Simpan hasil server sebagai cache lokal.
+      await BloomStore.savePosts(remotePosts);
 
-    setState(() {
-      posts = loaded;
-    });
+      if (!mounted) return;
+
+      setState(() {
+        posts = remotePosts;
+      });
+
+      debugPrint('[BLOOM API] ${remotePosts.length} Moment dimuat dari D1.');
+    } catch (e) {
+      // Jika server tidak tersedia, gunakan cache lokal.
+      debugPrint('[BLOOM API] Load D1 gagal: $e');
+
+      final localPosts = await BloomStore.loadPosts();
+
+      if (!mounted) return;
+
+      setState(() {
+        posts = localPosts;
+      });
+    }
   }
 
   Future<void> _addThought(String thought) async {
@@ -1994,14 +2012,17 @@ class _StoryRowState extends State<_StoryRow> {
         for (final item in rawStatuses) {
           if (item is Map) {
             final text = '${item['text'] ?? ''}'.trim();
+            final mediaUrl = '${item['media_url'] ?? ''}'.trim();
 
-            if (text.isEmpty) continue;
+            if (text.isEmpty && mediaUrl.isEmpty) continue;
 
             loaded.add({
               'user_id': '${item['user_id'] ?? ''}',
               'name': '${item['name'] ?? ''}'.trim(),
               'username': '${item['username'] ?? ''}'.trim(),
               'photo_url': '${item['photo_url'] ?? ''}'.trim(),
+              'media_url': '${item['media_url'] ?? ''}'.trim(),
+              'media_type': '${item['media_type'] ?? ''}'.trim(),
               'text': text,
               'updated_at': item['updated_at'],
             });
@@ -2070,7 +2091,10 @@ class _StoryRowState extends State<_StoryRow> {
           final name = status['name'] as String? ?? '';
           final username = status['username'] as String? ?? '';
           final photoUrl = status['photo_url'] as String? ?? '';
+          final mediaUrl = status['media_url'] as String? ?? '';
+          final mediaType = status['media_type'] as String? ?? '';
           final text = status['text'] as String? ?? '';
+          final storyImageUrl = mediaUrl.isNotEmpty ? mediaUrl : photoUrl;
 
           final displayName = name.isNotEmpty
               ? name
@@ -2078,29 +2102,48 @@ class _StoryRowState extends State<_StoryRow> {
 
           debugPrint(
             '[BLOOM STATUS PHOTO DEBUG] '
-            'name=$displayName photoUrl=$photoUrl',
+            'name=$displayName photoUrl=$photoUrl '
+            'mediaUrl=$mediaUrl mediaType=$mediaType',
           );
 
           return GestureDetector(
-            onTap: () {},
+            onTap: () => _openBloomStory(context, status),
             child: SizedBox(
               width: 78,
               child: Column(
                 children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: premiumBlue,
-                  ),
-                  child: ClipOval(
-                    child: photoUrl.isNotEmpty
-                        ? Image.network(
-                            photoUrl,
-                            width: 58,
-                            height: 58,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: premiumBlue,
+                    ),
+                    child: ClipOval(
+                      child: storyImageUrl.isNotEmpty
+                          ? Image.network(
+                              storyImageUrl,
+                              width: 58,
+                              height: 58,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    width: 58,
+                                    height: 58,
+                                    color: lightBlue,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      displayName.isNotEmpty
+                                          ? displayName[0].toUpperCase()
+                                          : 'B',
+                                      style: const TextStyle(
+                                        color: premiumBlue,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                            )
+                          : Container(
                               width: 58,
                               height: 58,
                               color: lightBlue,
@@ -2116,54 +2159,269 @@ class _StoryRowState extends State<_StoryRow> {
                                 ),
                               ),
                             ),
-                          )
-                        : Container(
-                            width: 58,
-                            height: 58,
-                            color: lightBlue,
-                            alignment: Alignment.center,
-                            child: Text(
-                              displayName.isNotEmpty
-                                  ? displayName[0].toUpperCase()
-                                  : 'B',
-                              style: const TextStyle(
-                                color: premiumBlue,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: navy,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                  const SizedBox(height: 6),
+                  Text(
+                    displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: navy,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: softText,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 2),
+                  Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: softText,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
                 ],
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+
+Future<void> _openBloomStory(
+  BuildContext context,
+  Map<String, dynamic> status,
+) async {
+  final mediaUrl = '${status['media_url'] ?? ''}'.trim();
+  final mediaType = '${status['media_type'] ?? ''}'.trim();
+  final text = '${status['text'] ?? ''}'.trim();
+  final name = '${status['name'] ?? ''}'.trim();
+  final username = '${status['username'] ?? ''}'.trim();
+
+  final displayName = name.isNotEmpty
+      ? name
+      : (username.isNotEmpty ? username : 'BLOOM');
+
+  if (mediaUrl.isEmpty && text.isEmpty) return;
+
+  await Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _BloomStoryViewer(
+        displayName: displayName,
+        mediaUrl: mediaUrl,
+        mediaType: mediaType,
+        text: text,
+      ),
+    ),
+  );
+}
+
+class _BloomStoryViewer extends StatefulWidget {
+  final String displayName;
+  final String mediaUrl;
+  final String mediaType;
+  final String text;
+
+  const _BloomStoryViewer({
+    required this.displayName,
+    required this.mediaUrl,
+    required this.mediaType,
+    required this.text,
+  });
+
+  @override
+  State<_BloomStoryViewer> createState() => _BloomStoryViewerState();
+}
+
+class _BloomStoryViewerState extends State<_BloomStoryViewer> {
+  VideoPlayerController? _videoController;
+  bool _isVideo = false;
+  bool _videoReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _isVideo =
+        widget.mediaType.toLowerCase().contains('video') ||
+        (widget.mediaUrl.isNotEmpty && _isVideoFile(widget.mediaUrl));
+
+    if (_isVideo && widget.mediaUrl.isNotEmpty) {
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.mediaUrl),
+      );
+
+      _videoController!.initialize().then((_) {
+        if (!mounted) return;
+
+        setState(() {
+          _videoReady = true;
+        });
+
+        _videoController!
+          ..setLooping(true)
+          ..play();
+      }).catchError((error) {
+        debugPrint('[BLOOM STORY VIDEO] $error');
+
+        if (!mounted) return;
+
+        setState(() {
+          _videoReady = false;
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasMedia = widget.mediaUrl.isNotEmpty;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Center(
+                child: !hasMedia
+                    ? _textStory()
+                    : _isVideo
+                        ? _buildVideo()
+                        : _buildImage(),
+              ),
+            ),
+
+            Positioned(
+              top: 12,
+              left: 14,
+              right: 14,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 21,
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (widget.text.isNotEmpty)
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 28,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    widget.text,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    return Image.network(
+      widget.mediaUrl,
+      fit: BoxFit.contain,
+      width: double.infinity,
+      height: double.infinity,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+
+        return const CircularProgressIndicator(
+          color: Colors.white,
+        );
+      },
+      errorBuilder: (_, _, _) {
+        return _textStory(
+          fallback: 'Foto Story tidak dapat ditampilkan.',
+        );
+      },
+    );
+  }
+
+  Widget _buildVideo() {
+    if (!_videoReady || _videoController == null) {
+      return const CircularProgressIndicator(
+        color: Colors.white,
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: _videoController!.value.aspectRatio,
+      child: VideoPlayer(_videoController!),
+    );
+  }
+
+  Widget _textStory({String? fallback}) {
+    final content =
+        widget.text.isNotEmpty ? widget.text : (fallback ?? 'BLOOM');
+
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Center(
+        child: Text(
+          content,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     );
   }
@@ -4187,14 +4445,6 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadMyStatus();
   }
 
-  String _freshMediaUrl(String url) {
-    final clean = url.trim();
-    if (clean.isEmpty) return clean;
-
-    final separator = clean.contains('?') ? '&' : '?';
-    return '$clean${separator}v=${DateTime.now().millisecondsSinceEpoch}';
-  }
-
   Future<void> _loadCloudProfile() async {
     try {
       final userId = await BloomApi.requireUserId();
@@ -4221,13 +4471,8 @@ class _ProfilePageState extends State<ProfilePage> {
       final cloudPhotoRaw = '${user['photo_url'] ?? ''}'.trim();
       final cloudBackgroundRaw = '${user['background_url'] ?? ''}'.trim();
 
-      final cloudPhoto = cloudPhotoRaw.isNotEmpty
-          ? _freshMediaUrl(cloudPhotoRaw)
-          : '';
-
-      final cloudBackground = cloudBackgroundRaw.isNotEmpty
-          ? _freshMediaUrl(cloudBackgroundRaw)
-          : '';
+      final cloudPhoto = cloudPhotoRaw;
+      final cloudBackground = cloudBackgroundRaw;
       final cloudVerifiedBadge = '${user['verified_badge'] ?? ''}'
           .trim()
           .toLowerCase();
@@ -4450,15 +4695,13 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    final freshCloudUrl = _freshMediaUrl(cloudUrl);
-
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profilePhotoKey, freshCloudUrl);
+    await prefs.setString(_profilePhotoKey, cloudUrl);
 
     if (!mounted) return;
 
     setState(() {
-      profilePhotoPath = freshCloudUrl;
+      profilePhotoPath = cloudUrl;
     });
 
     await _saveCloudProfile();
@@ -4480,15 +4723,13 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    final freshCloudUrl = _freshMediaUrl(cloudUrl);
-
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_backgroundPhotoKey, freshCloudUrl);
+    await prefs.setString(_backgroundPhotoKey, cloudUrl);
 
     if (!mounted) return;
 
     setState(() {
-      backgroundPhotoPath = freshCloudUrl;
+      backgroundPhotoPath = cloudUrl;
     });
 
     await _saveCloudProfile();
