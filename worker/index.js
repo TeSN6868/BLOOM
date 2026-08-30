@@ -17,26 +17,37 @@ export default {
         return json({ ok: false, error: "user_id_required" }, 400);
       }
 
-      const result = await env.DB.prepare(`
-        SELECT
-          id,
-          user_id,
-          text,
-          media_url,
-          media_type,
-          location,
-          activity,
-          created_at,
-          updated_at
-        FROM posts
-        WHERE user_id = ?
-        ORDER BY created_at DESC
-      `).bind(userId).all();
+      try {
+        const result = await env.DB.prepare(`
+          SELECT
+            id,
+            user_id,
+            text,
+            media_url,
+            media_type,
+            location,
+            activity,
+            created_at,
+            updated_at
+          FROM posts
+          WHERE user_id = ?
+          ORDER BY created_at DESC
+        `).bind(userId).all();
 
-      return json({
-        ok: true,
-        posts: result.results ?? []
-      });
+        return json({
+          ok: true,
+          posts: result.results ?? []
+        });
+      } catch (error) {
+        console.error("[BLOOM POSTS GET ERROR]", error);
+
+        return json({
+          ok: false,
+          error: "posts_query_failed",
+          message: String(error?.message ?? error),
+          name: String(error?.name ?? "")
+        }, 500);
+      }
     }
 
     if (request.method === "POST" && url.pathname === "/api/posts") {
