@@ -1850,7 +1850,7 @@ class _BloomHomePageState extends State<BloomHomePage> {
               ),
 
               const SizedBox(height: 16),
-              const _StoryRow(),
+
               const SizedBox(height: 20),
               if (_searching && _searchQuery.trim().isNotEmpty)
                 Padding(
