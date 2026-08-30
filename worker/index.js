@@ -836,7 +836,10 @@ export default {
         FROM bloom_status s
         LEFT JOIN users u
           ON u.id = s.user_id
-        WHERE TRIM(s.text) != ''
+        WHERE (
+            TRIM(s.text) != ''
+            OR TRIM(COALESCE(s.media_url, '')) != ''
+          )
           AND (
             s.user_id = ?
             OR s.user_id IN (
