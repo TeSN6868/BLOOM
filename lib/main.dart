@@ -2218,22 +2218,6 @@ class _StoryRow extends StatefulWidget {
   State<_StoryRow> createState() => _StoryRowState();
 }
 
-  return Container(
-    width: 58,
-    height: 58,
-    color: lightBlue,
-    alignment: Alignment.center,
-    child: Text(
-      displayName.isNotEmpty ? displayName[0].toUpperCase() : 'B',
-      style: const TextStyle(
-        color: premiumBlue,
-        fontSize: 20,
-        fontWeight: FontWeight.w900,
-      ),
-    ),
-  );
-}
-
 class _StoryRowState extends State<_StoryRow> {
   List<Map<String, dynamic>> statuses = [];
   bool loading = true;
