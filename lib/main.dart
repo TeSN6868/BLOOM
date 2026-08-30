@@ -1966,6 +1966,8 @@ class _StoryRow extends StatefulWidget {
 class _StoryRowState extends State<_StoryRow> {
   List<Map<String, dynamic>> statuses = [];
   bool loading = true;
+  String? _myUserId;
+  String? _myProfilePhoto;
 
   @override
   void initState() {
@@ -1976,6 +1978,14 @@ class _StoryRowState extends State<_StoryRow> {
   Future<void> _loadStatuses() async {
     try {
       final userId = await BloomApi.getUserId();
+      final prefs = await SharedPreferences.getInstance();
+
+      _myUserId = userId;
+      _myProfilePhoto = prefs.getString('bloom_profile_photo')?.trim();
+
+      if (_myProfilePhoto != null && _myProfilePhoto!.isEmpty) {
+        _myProfilePhoto = null;
+      }
 
       debugPrint('[BLOOM STATUS DEBUG] userId=$userId');
 
@@ -2092,12 +2102,23 @@ class _StoryRowState extends State<_StoryRow> {
           final username = status['username'] as String? ?? '';
           final photoUrl = status['photo_url'] as String? ?? '';
           final mediaUrl = status['media_url'] as String? ?? '';
+
+          final statusUserId = '${status['user_id'] ?? ''}'.trim();
+          final isMyStatus =
+              _myUserId != null &&
+              _myUserId!.isNotEmpty &&
+              statusUserId == _myUserId;
+
+          final profileImageUrl =
+              isMyStatus && _myProfilePhoto != null
+                  ? _myProfilePhoto!
+                  : photoUrl;
           final mediaType = status['media_type'] as String? ?? '';
           final text = status['text'] as String? ?? '';
 
           // Baris Story selalu memakai FOTO PROFIL.
           // Media Story hanya ditampilkan di viewer saat Story dibuka.
-          final storyImageUrl = photoUrl;
+          final storyImageUrl = profileImageUrl;
 
           final displayName = name.isNotEmpty
               ? name
