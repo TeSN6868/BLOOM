@@ -126,6 +126,20 @@ jobs:
             --file=worker/schema.sql
 
           echo
+          echo "===== INITIALIZE BLOOM MESSAGING V1 ====="
+
+          wrangler d1 execute bloom-db \
+            --remote \
+            --file=worker/migrations/20260831_messaging_v1.sql
+
+          echo
+          echo "===== VERIFY MESSAGING TABLES ====="
+
+          wrangler d1 execute bloom-db \
+            --remote \
+            --command="SELECT name FROM sqlite_master WHERE type='table' AND name IN ('conversations','messages') ORDER BY name;"
+
+          echo
           echo "===== CHECK POSTS COLUMNS ====="
 
           COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(posts);')"
