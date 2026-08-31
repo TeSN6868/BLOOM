@@ -719,14 +719,26 @@ class _BloomAuthGateState extends State<BloomAuthGate> {
   }
 
   Future<void> _checkSession() async {
-    final active = await BloomApi.isLoggedIn();
+    try {
+      final active = await BloomApi.isLoggedIn();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      loggedIn = active;
-      loading = false;
-    });
+      setState(() {
+        loggedIn = active;
+        loading = false;
+      });
+    } catch (e, stack) {
+      debugPrint('[BLOOM STARTUP ERROR] $e');
+      debugPrint('$stack');
+
+      if (!mounted) return;
+
+      setState(() {
+        loggedIn = false;
+        loading = false;
+      });
+    }
   }
 
   @override
