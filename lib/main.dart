@@ -1287,7 +1287,7 @@ class _BloomShellState extends State<BloomShell> {
   Widget build(BuildContext context) {
     final pages = [
       BloomHomePage(key: homeKey),
-      const CirclePage(),
+      const BloomMessagesPage(),
       const SizedBox(),
       const NotificationsPage(),
       const ProfilePage(),
