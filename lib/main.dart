@@ -2004,12 +2004,16 @@ class _BloomStoryViewer extends StatefulWidget {
   final String mediaUrl;
   final String mediaType;
   final String text;
+  final String location;
+  final String activity;
 
   const _BloomStoryViewer({
     required this.displayName,
     required this.mediaUrl,
     required this.mediaType,
     required this.text,
+    this.location = '',
+    this.activity = '',
   });
 
   @override
@@ -2067,84 +2071,201 @@ class _BloomStoryViewerState extends State<_BloomStoryViewer> {
 
   @override
   Widget build(BuildContext context) {
-    final hasMedia = widget.mediaUrl.isNotEmpty;
+    final hasMedia = widget.mediaUrl.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Center(
-                child: !hasMedia
-                    ? _textStory()
-                    : _isVideo
-                    ? _buildVideo()
-                    : _buildImage(),
-              ),
-            ),
-
-            Positioned(
-              top: 12,
-              left: 14,
-              right: 14,
-              child: Row(
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: 9 / 16,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  CircleAvatar(
-                    radius: 21,
-                    backgroundColor: Colors.white.withValues(alpha: 0.15),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Colors.white,
+                  if (!hasMedia)
+                    Container(
+                      color: const Color(0xFF17233D),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 80,
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
+                      child: _textStory(),
+                    )
+                  else if (_isVideo)
+                    Container(
+                      color: Colors.black,
+                      alignment: Alignment.center,
+                      child: _buildVideo(),
+                    )
+                  else
+                    Container(
+                      color: Colors.black,
+                      alignment: Alignment.center,
+                      child: _buildImage(),
+                    ),
+
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 130,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.60),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      widget.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+
+                  if (widget.activity.trim().isNotEmpty ||
+                      widget.location.trim().isNotEmpty)
+                    Positioned(
+                      left: 18,
+                      right: 18,
+                      bottom:
+                          widget.text.trim().isNotEmpty && hasMedia
+                              ? 118
+                              : 24,
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (widget.activity.trim().isNotEmpty)
+                            _storyInfoPill(
+                              Icons.auto_awesome_rounded,
+                              widget.activity.trim(),
+                            ),
+                          if (widget.location.trim().isNotEmpty)
+                            _storyInfoPill(
+                              Icons.location_on_rounded,
+                              widget.location.trim(),
+                            ),
+                        ],
                       ),
+                    ),
+
+                  if (widget.text.trim().isNotEmpty && hasMedia)
+                    Positioned(
+                      left: 18,
+                      right: 18,
+                      bottom: 24,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.58),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          widget.text.trim(),
+                          textAlign: TextAlign.center,
+                          maxLines: 6,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            height: 1.3,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  Positioned(
+                    top: 12,
+                    left: 14,
+                    right: 14,
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 21,
+                          backgroundColor:
+                              Colors.black.withValues(alpha: 0.35),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            widget.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black54,
+                                  blurRadius: 5,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-
-            if (widget.text.isNotEmpty)
-              Positioned(
-                left: 20,
-                right: 20,
-                bottom: 28,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    widget.text,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _storyInfoPill(IconData icon, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.60),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: Colors.white,
+            size: 15,
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2228,6 +2349,79 @@ class _StoryRow extends StatefulWidget {
 }
 
 class _StoryRowState extends State<_StoryRow> {
+
+  Widget _buildBloomStatusAvatar({
+    required String photoUrl,
+    required String displayName,
+  }) {
+    final rawUrl = photoUrl.trim();
+
+    if (rawUrl.isEmpty) {
+      return _buildBloomStatusInitial(displayName);
+    }
+
+    final String resolvedUrl;
+
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      resolvedUrl = rawUrl;
+    } else if (rawUrl.startsWith('/')) {
+      resolvedUrl = '${BloomApi.baseUrl}$rawUrl';
+    } else {
+      resolvedUrl = '${BloomApi.baseUrl}/$rawUrl';
+    }
+
+    debugPrint(
+      '[BLOOM STATUS AVATAR] '
+      'name=$displayName '
+      'raw=$rawUrl '
+      'resolved=$resolvedUrl',
+    );
+
+    return Image.network(
+      resolvedUrl,
+      width: 58,
+      height: 58,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+      gaplessPlayback: true,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) {
+          return child;
+        }
+
+        return _buildBloomStatusInitial(displayName);
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint(
+          '[BLOOM STATUS AVATAR ERROR] '
+          'name=$displayName '
+          'url=$resolvedUrl '
+          'error=$error',
+        );
+        return _buildBloomStatusInitial(displayName);
+      },
+    );
+  }
+
+  Widget _buildBloomStatusInitial(String displayName) {
+    return Container(
+      width: 58,
+      height: 58,
+      color: lightBlue,
+      alignment: Alignment.center,
+      child: Text(
+        displayName.trim().isNotEmpty
+            ? displayName.trim()[0].toUpperCase()
+            : 'B',
+        style: const TextStyle(
+          color: premiumBlue,
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
   List<Map<String, dynamic>> statuses = [];
   bool loading = true;
 
@@ -2274,8 +2468,17 @@ class _StoryRowState extends State<_StoryRow> {
         for (final item in rawStatuses) {
           if (item is Map) {
             final text = '${item['text'] ?? ''}'.trim();
+            final mediaUrl = '${item['media_url'] ?? ''}'.trim();
+            final mediaType = '${item['media_type'] ?? ''}'.trim();
+            final location = '${item['location'] ?? ''}'.trim();
+            final activity = '${item['activity'] ?? ''}'.trim();
 
-            if (text.isEmpty) continue;
+            if (text.isEmpty &&
+                mediaUrl.isEmpty &&
+                location.isEmpty &&
+                activity.isEmpty) {
+              continue;
+            }
 
             debugPrint(
               '[BLOOM STATUS PHOTO] '
@@ -2290,6 +2493,10 @@ class _StoryRowState extends State<_StoryRow> {
               'username': '${item['username'] ?? ''}'.trim(),
               'photo_url': '${item['photo_url'] ?? ''}'.trim(),
               'text': text,
+              'media_url': mediaUrl,
+              'media_type': mediaType,
+              'location': location,
+              'activity': activity,
               'updated_at': item['updated_at'],
             });
           }
@@ -2358,64 +2565,47 @@ class _StoryRowState extends State<_StoryRow> {
           final username = status['username'] as String? ?? '';
           final photoUrl = status['photo_url'] as String? ?? '';
           final text = status['text'] as String? ?? '';
+          final mediaUrl = status['media_url'] as String? ?? '';
+          final mediaType = status['media_type'] as String? ?? '';
+          final location = status['location'] as String? ?? '';
+          final activity = status['activity'] as String? ?? '';
 
           final displayName = name.isNotEmpty
               ? name
               : (username.isNotEmpty ? username : 'BLOOM');
 
           return GestureDetector(
-            onTap: () {},
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => _BloomStoryViewer(
+                    displayName: displayName,
+                    mediaUrl: mediaUrl,
+                    mediaType: mediaType,
+                    text: text,
+                    location: location,
+                    activity: activity,
+                  ),
+                ),
+              );
+            },
             child: SizedBox(
               width: 78,
               child: Column(
                 children: [
                   Container(
+                    width: 64,
+                    height: 64,
                     padding: const EdgeInsets.all(3),
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: premiumBlue,
                     ),
                     child: ClipOval(
-                      child: photoUrl.isNotEmpty
-                          ? Image.network(
-                              photoUrl,
-                              width: 58,
-                              height: 58,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    width: 58,
-                                    height: 58,
-                                    color: lightBlue,
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      displayName.isNotEmpty
-                                          ? displayName[0].toUpperCase()
-                                          : 'B',
-                                      style: const TextStyle(
-                                        color: premiumBlue,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                            )
-                          : Container(
-                              width: 58,
-                              height: 58,
-                              color: lightBlue,
-                              alignment: Alignment.center,
-                              child: Text(
-                                displayName.isNotEmpty
-                                    ? displayName[0].toUpperCase()
-                                    : 'B',
-                                style: const TextStyle(
-                                  color: premiumBlue,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
+                      child: _buildBloomStatusAvatar(
+                        photoUrl: photoUrl,
+                        displayName: displayName,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -2428,18 +2618,6 @@ class _StoryRowState extends State<_StoryRow> {
                       color: navy,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: softText,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

@@ -175,6 +175,28 @@ jobs:
               --command="ALTER TABLE bloom_status ADD COLUMN media_type TEXT DEFAULT '';"
           fi
 
+          STATUS_COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(bloom_status);')"
+
+          if echo "$STATUS_COLUMNS" | grep -q "location"; then
+            echo "bloom_status.location sudah ada."
+          else
+            echo "Menambahkan bloom_status.location..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE bloom_status ADD COLUMN location TEXT DEFAULT '';"
+          fi
+
+          STATUS_COLUMNS="$(wrangler d1 execute bloom-db --remote --command='PRAGMA table_info(bloom_status);')"
+
+          if echo "$STATUS_COLUMNS" | grep -q "activity"; then
+            echo "bloom_status.activity sudah ada."
+          else
+            echo "Menambahkan bloom_status.activity..."
+            wrangler d1 execute bloom-db \
+              --remote \
+              --command="ALTER TABLE bloom_status ADD COLUMN activity TEXT DEFAULT '';"
+          fi
+
           echo "===== FINAL BLOOM STATUS COLUMNS ====="
           wrangler d1 execute bloom-db \
             --remote \

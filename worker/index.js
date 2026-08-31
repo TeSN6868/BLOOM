@@ -894,6 +894,8 @@ export default {
           s.text,
           s.media_url,
           s.media_type,
+          s.location,
+          s.activity,
           s.updated_at,
           u.name,
           u.username,
@@ -904,6 +906,8 @@ export default {
         WHERE (
             TRIM(s.text) != ''
             OR TRIM(COALESCE(s.media_url, '')) != ''
+            OR TRIM(COALESCE(s.location, '')) != ''
+            OR TRIM(COALESCE(s.activity, '')) != ''
           )
           AND (
             s.user_id = ?
@@ -951,6 +955,10 @@ export default {
         SELECT
           user_id,
           text,
+          media_url,
+          media_type,
+          location,
+          activity,
           updated_at
         FROM bloom_status
         WHERE user_id = ?
@@ -962,6 +970,10 @@ export default {
         status: status ?? {
           user_id: userId,
           text: "",
+          media_url: "",
+          media_type: "",
+          location: "",
+          activity: "",
           updated_at: 0
         }
       });
@@ -975,6 +987,8 @@ export default {
       const text = String(body.text ?? "").trim();
       const mediaUrl = String(body.media_url ?? "").trim();
       const mediaType = String(body.media_type ?? "").trim();
+      const location = String(body.location ?? "").trim();
+      const activity = String(body.activity ?? "").trim();
 
       if (!userId) {
         return json({ ok: false, error: "user_id_required" }, 400);
@@ -1009,20 +1023,26 @@ export default {
           text,
           media_url,
           media_type,
+          location,
+          activity,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id)
         DO UPDATE SET
           text = excluded.text,
           media_url = excluded.media_url,
           media_type = excluded.media_type,
+          location = excluded.location,
+          activity = excluded.activity,
           updated_at = excluded.updated_at
       `).bind(
         userId,
         text,
         mediaUrl,
         mediaType,
+        location,
+        activity,
         now
       ).run();
 
@@ -1033,6 +1053,8 @@ export default {
           text,
           media_url: mediaUrl,
           media_type: mediaType,
+          location,
+          activity,
           updated_at: now
         }
       });
