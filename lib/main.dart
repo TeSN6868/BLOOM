@@ -2891,23 +2891,44 @@ class _PostCardState extends State<_PostCard> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: premiumBlue,
-                backgroundImage:
-                    widget.photoUrl != null && widget.photoUrl!.isNotEmpty
-                        ? NetworkImage(widget.photoUrl!)
-                        : null,
-                child:
-                    widget.photoUrl == null || widget.photoUrl!.isEmpty
-                        ? Text(
-                            widget.letter,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          )
-                        : null,
-              ),
+              Builder(
+                  builder: (context) {
+                    final rawUrl = widget.photoUrl?.trim() ?? '';
+
+                    if (rawUrl.isEmpty) {
+                      return CircleAvatar(
+                        backgroundColor: premiumBlue,
+                        child: Text(
+                          widget.letter,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final resolvedUrl =
+                        rawUrl.startsWith('http://') ||
+                                rawUrl.startsWith('https://')
+                            ? rawUrl
+                            : rawUrl.startsWith('/')
+                                ? '${BloomApi.baseUrl}$rawUrl'
+                                : '${BloomApi.baseUrl}/$rawUrl';
+
+                    debugPrint(
+                      '[BLOOM MOMENT AVATAR] '
+                      'name=${widget.name} '
+                      'raw=$rawUrl '
+                      'resolved=$resolvedUrl',
+                    );
+
+                    return CircleAvatar(
+                      backgroundColor: premiumBlue,
+                      backgroundImage: NetworkImage(resolvedUrl),
+                    );
+                  },
+                ),
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
