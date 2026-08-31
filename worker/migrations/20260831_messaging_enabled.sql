@@ -1,0 +1,2 @@
+ALTER TABLE users
+ADD COLUMN messaging_enabled INTEGER NOT NULL DEFAULT 1;

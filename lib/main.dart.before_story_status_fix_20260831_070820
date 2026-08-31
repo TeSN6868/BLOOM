@@ -15,7 +15,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'bloom_messaging_service.dart';
 
 const premiumBlue = Color(0xFF0756A6);
 const lightBlue = Color(0xFFE8F2FF);
@@ -1907,151 +1906,18 @@ class _BloomHomePageState extends State<BloomHomePage> {
 
               const SizedBox(height: 22),
 
-              Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Status',
-                      style: TextStyle(
-                        color: navy,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: createThought,
-                      icon: const Icon(
-                        Icons.add_rounded,
-                        size: 18,
-                        color: premiumBlue,
-                      ),
-                      label: const Text(
-                        'Buat',
-                        style: TextStyle(
-                          color: premiumBlue,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
-                  ],
+              const Text(
+                'Status',
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
                 ),
+              ),
+              const SizedBox(height: 10),
 
-                const SizedBox(height: 10),
-
-                InkWell(
-                  borderRadius: BorderRadius.circular(22),
-                  onTap: createThought,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: const Color(0xFFE4ECF7),
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x12063B78),
-                          blurRadius: 18,
-                          offset: Offset(0, 7),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF003B73),
-                                Color(0xFF1976D2),
-                              ],
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.auto_awesome_rounded,
-                            color: Colors.white,
-                            size: 23,
-                          ),
-                        ),
-                        const SizedBox(width: 13),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Bagikan sesuatu hari ini',
-                                style: TextStyle(
-                                  color: navy,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Tulis Moment kecilmu. Biar tetap berarti.',
-                                style: TextStyle(
-                                  color: softText,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: premiumBlue,
-                          size: 25,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Moments',
-                      style: TextStyle(
-                        color: navy,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (posts.isNotEmpty)
-                      Text(
-                        '${_filteredPosts.length}',
-                        style: const TextStyle(
-                          color: premiumBlue,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                const SizedBox(height: 20),
-                if (_searching && _searchQuery.trim().isNotEmpty)
+              const SizedBox(height: 20),
+              if (_searching && _searchQuery.trim().isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: Text(
@@ -2138,16 +2004,12 @@ class _BloomStoryViewer extends StatefulWidget {
   final String mediaUrl;
   final String mediaType;
   final String text;
-  final String location;
-  final String activity;
 
   const _BloomStoryViewer({
     required this.displayName,
     required this.mediaUrl,
     required this.mediaType,
     required this.text,
-    this.location = '',
-    this.activity = '',
   });
 
   @override
@@ -2262,34 +2124,6 @@ class _BloomStoryViewerState extends State<_BloomStoryViewer> {
                     ),
                   ),
 
-                  if (widget.activity.trim().isNotEmpty ||
-                      widget.location.trim().isNotEmpty)
-                    Positioned(
-                      left: 18,
-                      right: 18,
-                      bottom:
-                          widget.text.trim().isNotEmpty && hasMedia
-                              ? 118
-                              : 24,
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (widget.activity.trim().isNotEmpty)
-                            _storyInfoPill(
-                              Icons.auto_awesome_rounded,
-                              widget.activity.trim(),
-                            ),
-                          if (widget.location.trim().isNotEmpty)
-                            _storyInfoPill(
-                              Icons.location_on_rounded,
-                              widget.location.trim(),
-                            ),
-                        ],
-                      ),
-                    ),
-
                   if (widget.text.trim().isNotEmpty && hasMedia)
                     Positioned(
                       left: 18,
@@ -2364,42 +2198,6 @@ class _BloomStoryViewerState extends State<_BloomStoryViewer> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _storyInfoPill(IconData icon, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.60),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: Colors.white,
-            size: 15,
-          ),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2483,79 +2281,6 @@ class _StoryRow extends StatefulWidget {
 }
 
 class _StoryRowState extends State<_StoryRow> {
-
-  Widget _buildBloomStatusAvatar({
-    required String photoUrl,
-    required String displayName,
-  }) {
-    final rawUrl = photoUrl.trim();
-
-    if (rawUrl.isEmpty) {
-      return _buildBloomStatusInitial(displayName);
-    }
-
-    final String resolvedUrl;
-
-    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
-      resolvedUrl = rawUrl;
-    } else if (rawUrl.startsWith('/')) {
-      resolvedUrl = '${BloomApi.baseUrl}$rawUrl';
-    } else {
-      resolvedUrl = '${BloomApi.baseUrl}/$rawUrl';
-    }
-
-    debugPrint(
-      '[BLOOM STATUS AVATAR] '
-      'name=$displayName '
-      'raw=$rawUrl '
-      'resolved=$resolvedUrl',
-    );
-
-    return Image.network(
-      resolvedUrl,
-      width: 58,
-      height: 58,
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.high,
-      gaplessPlayback: true,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) {
-          return child;
-        }
-
-        return _buildBloomStatusInitial(displayName);
-      },
-      errorBuilder: (context, error, stackTrace) {
-        debugPrint(
-          '[BLOOM STATUS AVATAR ERROR] '
-          'name=$displayName '
-          'url=$resolvedUrl '
-          'error=$error',
-        );
-        return _buildBloomStatusInitial(displayName);
-      },
-    );
-  }
-
-  Widget _buildBloomStatusInitial(String displayName) {
-    return Container(
-      width: 58,
-      height: 58,
-      color: lightBlue,
-      alignment: Alignment.center,
-      child: Text(
-        displayName.trim().isNotEmpty
-            ? displayName.trim()[0].toUpperCase()
-            : 'B',
-        style: const TextStyle(
-          color: premiumBlue,
-          fontSize: 20,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-
   List<Map<String, dynamic>> statuses = [];
   bool loading = true;
 
@@ -2602,17 +2327,8 @@ class _StoryRowState extends State<_StoryRow> {
         for (final item in rawStatuses) {
           if (item is Map) {
             final text = '${item['text'] ?? ''}'.trim();
-            final mediaUrl = '${item['media_url'] ?? ''}'.trim();
-            final mediaType = '${item['media_type'] ?? ''}'.trim();
-            final location = '${item['location'] ?? ''}'.trim();
-            final activity = '${item['activity'] ?? ''}'.trim();
 
-            if (text.isEmpty &&
-                mediaUrl.isEmpty &&
-                location.isEmpty &&
-                activity.isEmpty) {
-              continue;
-            }
+            if (text.isEmpty) continue;
 
             debugPrint(
               '[BLOOM STATUS PHOTO] '
@@ -2627,10 +2343,6 @@ class _StoryRowState extends State<_StoryRow> {
               'username': '${item['username'] ?? ''}'.trim(),
               'photo_url': '${item['photo_url'] ?? ''}'.trim(),
               'text': text,
-              'media_url': mediaUrl,
-              'media_type': mediaType,
-              'location': location,
-              'activity': activity,
               'updated_at': item['updated_at'],
             });
           }
@@ -2699,47 +2411,64 @@ class _StoryRowState extends State<_StoryRow> {
           final username = status['username'] as String? ?? '';
           final photoUrl = status['photo_url'] as String? ?? '';
           final text = status['text'] as String? ?? '';
-          final mediaUrl = status['media_url'] as String? ?? '';
-          final mediaType = status['media_type'] as String? ?? '';
-          final location = status['location'] as String? ?? '';
-          final activity = status['activity'] as String? ?? '';
 
           final displayName = name.isNotEmpty
               ? name
               : (username.isNotEmpty ? username : 'BLOOM');
 
           return GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => _BloomStoryViewer(
-                    displayName: displayName,
-                    mediaUrl: mediaUrl,
-                    mediaType: mediaType,
-                    text: text,
-                    location: location,
-                    activity: activity,
-                  ),
-                ),
-              );
-            },
+            onTap: () {},
             child: SizedBox(
               width: 78,
               child: Column(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
                     padding: const EdgeInsets.all(3),
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: premiumBlue,
                     ),
                     child: ClipOval(
-                      child: _buildBloomStatusAvatar(
-                        photoUrl: photoUrl,
-                        displayName: displayName,
-                      ),
+                      child: photoUrl.isNotEmpty
+                          ? Image.network(
+                              photoUrl,
+                              width: 58,
+                              height: 58,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    width: 58,
+                                    height: 58,
+                                    color: lightBlue,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      displayName.isNotEmpty
+                                          ? displayName[0].toUpperCase()
+                                          : 'B',
+                                      style: const TextStyle(
+                                        color: premiumBlue,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                            )
+                          : Container(
+                              width: 58,
+                              height: 58,
+                              color: lightBlue,
+                              alignment: Alignment.center,
+                              child: Text(
+                                displayName.isNotEmpty
+                                    ? displayName[0].toUpperCase()
+                                    : 'B',
+                                style: const TextStyle(
+                                  color: premiumBlue,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -2752,6 +2481,18 @@ class _StoryRowState extends State<_StoryRow> {
                       color: navy,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: softText,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -2892,44 +2633,23 @@ class _PostCardState extends State<_PostCard> {
         children: [
           Row(
             children: [
-              Builder(
-                  builder: (context) {
-                    final rawUrl = widget.photoUrl?.trim() ?? '';
-
-                    if (rawUrl.isEmpty) {
-                      return CircleAvatar(
-                        backgroundColor: premiumBlue,
-                        child: Text(
-                          widget.letter,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      );
-                    }
-
-                    final resolvedUrl =
-                        rawUrl.startsWith('http://') ||
-                                rawUrl.startsWith('https://')
-                            ? rawUrl
-                            : rawUrl.startsWith('/')
-                                ? '${BloomApi.baseUrl}$rawUrl'
-                                : '${BloomApi.baseUrl}/$rawUrl';
-
-                    debugPrint(
-                      '[BLOOM MOMENT AVATAR] '
-                      'name=${widget.name} '
-                      'raw=$rawUrl '
-                      'resolved=$resolvedUrl',
-                    );
-
-                    return CircleAvatar(
-                      backgroundColor: premiumBlue,
-                      backgroundImage: NetworkImage(resolvedUrl),
-                    );
-                  },
-                ),
+              CircleAvatar(
+                backgroundColor: premiumBlue,
+                backgroundImage:
+                    widget.photoUrl != null && widget.photoUrl!.isNotEmpty
+                        ? NetworkImage(widget.photoUrl!)
+                        : null,
+                child:
+                    widget.photoUrl == null || widget.photoUrl!.isEmpty
+                        ? Text(
+                            widget.letter,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          )
+                        : null,
+              ),
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
@@ -3580,12 +3300,10 @@ class CreateBloomSheet extends StatefulWidget {
     String? location,
     String? voicePath,
     String? listening,
-  })? onCreate;
+  })?
+  onCreate;
 
-  const CreateBloomSheet({
-    super.key,
-    this.onCreate,
-  });
+  const CreateBloomSheet({super.key, this.onCreate});
 
   @override
   State<CreateBloomSheet> createState() => _CreateBloomSheetState();
@@ -3600,7 +3318,6 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
   String? location;
   String? voicePath;
   String? listening;
-
   bool recording = false;
   bool publishing = false;
   bool publishAsStatus = false;
@@ -3617,10 +3334,7 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
     final file = await picker.pickImage(source: ImageSource.gallery);
 
     if (file != null && mounted) {
-      setState(() {
-        image = file;
-        video = null;
-      });
+      setState(() => image = file);
     }
   }
 
@@ -3629,10 +3343,7 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
     final file = await picker.pickVideo(source: ImageSource.gallery);
 
     if (file != null && mounted) {
-      setState(() {
-        video = file;
-        image = null;
-      });
+      setState(() => video = file);
     }
   }
 
@@ -3652,9 +3363,7 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
       return;
     }
 
-    setState(() {
-      location = result;
-    });
+    setState(() => location = result);
   }
 
   Future<void> toggleVoice() async {
@@ -3665,9 +3374,7 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
 
       if (path == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Izin mikrofon belum diberikan.'),
-          ),
+          const SnackBar(content: Text('Izin mikrofon belum diberikan.')),
         );
         return;
       }
@@ -3676,7 +3383,6 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
         recording = true;
         voicePath = path;
       });
-
       return;
     }
 
@@ -3722,13 +3428,7 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
                   Icons.music_note_rounded,
                   color: premiumBlue,
                 ),
-                title: Text(
-                  item,
-                  style: const TextStyle(
-                    color: navy,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                title: Text(item),
                 onTap: () => Navigator.pop(context, item),
               ),
           ],
@@ -3756,24 +3456,18 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
         listening == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Tambahkan sesuatu sebelum membuat Bloom.',
-          ),
+          content: Text('Tambahkan sesuatu sebelum membuat Bloom.'),
         ),
       );
       return;
     }
 
-    setState(() {
-      publishing = true;
-    });
+    setState(() => publishing = true);
 
     try {
       if (publishAsStatus) {
         if (text.isEmpty) {
-          throw Exception(
-            'Status Story membutuhkan teks.',
-          );
+          throw Exception('Status Story membutuhkan teks.');
         }
 
         final userId = await BloomApi.getUserId();
@@ -3782,19 +3476,12 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
           throw Exception('user_id_required');
         }
 
-        await BloomApi.updateProfileStatus(
-          userId: userId,
-          text: text,
-        );
+        await BloomApi.updateProfileStatus(userId: userId, text: text);
 
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Status berhasil dikirim ke Story.',
-            ),
-          ),
+          const SnackBar(content: Text('Status berhasil dikirim ke Story.')),
         );
 
         Navigator.pop(context);
@@ -3826,329 +3513,154 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
       );
     } finally {
       if (mounted) {
-        setState(() {
-          publishing = false;
-        });
+        setState(() => publishing = false);
       }
     }
-  }
-
-  Widget _toolButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool active = false,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(17),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 13,
-          vertical: 11,
-        ),
-        decoration: BoxDecoration(
-          color: active ? premiumBlue : lightBlue,
-          borderRadius: BorderRadius.circular(17),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 19,
-              color: active ? Colors.white : premiumBlue,
-            ),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? Colors.white : navy,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _previewCard() {
-    if (image == null && video == null && location == null &&
-        voicePath == null && listening == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(top: 15),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: lightBlue,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (image != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.file(
-                File(image!.path),
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-
-          if (video != null)
-            const _Pill(
-              'Video siap',
-              Icons.videocam_rounded,
-            ),
-
-          if (location != null) ...[
-            const SizedBox(height: 8),
-            _Pill(
-              location!,
-              Icons.location_on_rounded,
-            ),
-            const SizedBox(height: 8),
-            _BloomLocationMap(
-              location: location!,
-            ),
-          ],
-
-          if (voicePath != null) ...[
-            const SizedBox(height: 8),
-            const _Pill(
-              'Voice siap',
-              Icons.mic_rounded,
-            ),
-          ],
-
-          if (listening != null) ...[
-            const SizedBox(height: 8),
-            _Pill(
-              listening!,
-              Icons.music_note_rounded,
-            ),
-          ],
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          8,
-          20,
-          30,
-        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(10),
+            const Center(
+              child: Text(
+                'Create a Bloom',
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ),
-
             const SizedBox(height: 18),
 
-            Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: premiumBlue,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: const Icon(
-                    Icons.local_florist_rounded,
-                    color: Colors.white,
-                    size: 25,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Create a Bloom',
-                        style: TextStyle(
-                          color: navy,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Bagikan apa yang sedang tumbuh hari ini.',
-                        style: TextStyle(
-                          color: softText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Tampilkan di Story',
+                style: TextStyle(color: navy, fontWeight: FontWeight.w800),
+              ),
+              subtitle: const Text(
+                'Status ini akan tampil di Story.',
+                style: TextStyle(color: softText, fontSize: 12),
+              ),
+              value: publishAsStatus,
+              activeThumbColor: premiumBlue,
+              onChanged: (value) {
+                setState(() {
+                  publishAsStatus = value;
+                });
+              },
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
 
-            Container(
-              decoration: BoxDecoration(
-                color: lightBlue,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: TextField(
-                controller: textController,
-                maxLines: 5,
-                minLines: 4,
-                style: const TextStyle(
-                  color: navy,
-                  fontSize: 15,
-                  height: 1.45,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: const InputDecoration(
-                  hintText:
-                      'Apa yang ingin kamu bagikan hari ini?',
-                  hintStyle: TextStyle(
-                    color: softText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  contentPadding: EdgeInsets.all(18),
-                  border: InputBorder.none,
+            TextField(
+              controller: textController,
+              maxLines: 5,
+              decoration: InputDecoration(
+                hintText: 'Apa yang ingin kamu bagikan hari ini?',
+                filled: true,
+                fillColor: lightBlue,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _toolButton(
-                  icon: Icons.photo_outlined,
-                  label: image == null ? 'Foto' : 'Foto ✓',
-                  active: image != null,
-                  onTap: pickImage,
+                ActionChip(
+                  avatar: const Icon(Icons.photo_outlined),
+                  label: Text(image == null ? 'Foto' : 'Foto ✓'),
+                  onPressed: pickImage,
                 ),
-                _toolButton(
-                  icon: Icons.videocam_outlined,
-                  label: video == null ? 'Video' : 'Video ✓',
-                  active: video != null,
-                  onTap: pickVideo,
+                ActionChip(
+                  avatar: const Icon(Icons.videocam_outlined),
+                  label: Text(video == null ? 'Video' : 'Video ✓'),
+                  onPressed: pickVideo,
                 ),
-                _toolButton(
-                  icon: Icons.location_on_outlined,
-                  label: location == null ? 'Lokasi' : 'Lokasi ✓',
-                  active: location != null,
-                  onTap: pickLocation,
+                ActionChip(
+                  avatar: const Icon(Icons.location_on_outlined),
+                  label: Text(location == null ? 'Lokasi' : 'Lokasi ✓'),
+                  onPressed: pickLocation,
                 ),
-                _toolButton(
-                  icon: recording
-                      ? Icons.stop_circle_outlined
-                      : Icons.mic_none_rounded,
-                  label: recording ? 'Stop Voice' : 'Voice',
-                  active: recording || voicePath != null,
-                  onTap: toggleVoice,
+                ActionChip(
+                  avatar: Icon(
+                    recording
+                        ? Icons.stop_circle_outlined
+                        : Icons.mic_none_rounded,
+                  ),
+                  label: Text(recording ? 'Stop Voice' : 'Voice'),
+                  onPressed: toggleVoice,
                 ),
-                _toolButton(
-                  icon: Icons.music_note_rounded,
-                  label: listening == null
-                      ? 'Listening'
-                      : listening!,
-                  active: listening != null,
-                  onTap: chooseListening,
+                ActionChip(
+                  avatar: const Icon(Icons.music_note_rounded),
+                  label: Text(listening == null ? 'Listening' : listening!),
+                  onPressed: chooseListening,
                 ),
               ],
             ),
 
-            _previewCard(),
-
-            const SizedBox(height: 18),
-
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 5,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
+            if (image != null) ...[
+              const SizedBox(height: 14),
+              ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: lightBlue,
-                  width: 1.5,
+                child: Image.file(
+                  File(image!.path),
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
               ),
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  'Tampilkan di Story',
-                  style: TextStyle(
-                    color: navy,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                subtitle: const Text(
-                  'Bagikan juga sebagai status Story.',
-                  style: TextStyle(
-                    color: softText,
-                    fontSize: 11,
-                  ),
-                ),
-                value: publishAsStatus,
-                activeThumbColor: premiumBlue,
-                onChanged: (value) {
-                  setState(() {
-                    publishAsStatus = value;
-                  });
-                },
-              ),
-            ),
+            ],
 
-            const SizedBox(height: 20),
+            if (video != null) ...[
+              const SizedBox(height: 10),
+              const _Pill('Video siap', Icons.videocam_rounded),
+            ],
+
+            if (location != null) ...[
+              const SizedBox(height: 10),
+              _Pill(location!, Icons.location_on_rounded),
+              const SizedBox(height: 10),
+              _BloomLocationMap(location: location!),
+            ],
+
+            if (voicePath != null) ...[
+              const SizedBox(height: 10),
+              const _Pill('Voice siap', Icons.mic_rounded),
+            ],
+
+            if (listening != null) ...[
+              const SizedBox(height: 10),
+              _Pill(listening!, Icons.music_note_rounded),
+            ],
+
+            const SizedBox(height: 22),
 
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 54,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: premiumBlue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
                 ),
                 onPressed: publishing ? null : publish,
-                icon: Icon(
-                  publishing
-                      ? Icons.hourglass_top_rounded
-                      : Icons.bubble_chart_rounded,
-                ),
+                icon: const Icon(Icons.bubble_chart_rounded),
                 label: Text(
                   publishing ? 'MEMBUAT...' : 'POST BLOOM',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: .3,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
@@ -4520,884 +4032,6 @@ class BloomFlowPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant BloomFlowPainter oldDelegate) => false;
 }
-
-
-// ============================================================
-// BLOOM MESSAGING UI V1
-// ============================================================
-
-class BloomMessagesPage extends StatefulWidget {
-  const BloomMessagesPage({super.key});
-
-  @override
-  State<BloomMessagesPage> createState() => _BloomMessagesPageState();
-}
-
-class _BloomMessagesPageState extends State<BloomMessagesPage> {
-  late final BloomMessagingService _messaging;
-
-  List<BloomConversation> _conversations = const [];
-  bool _loading = true;
-  String? _error;
-  String? _userId;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _messaging = const BloomMessagingService(
-      baseUrl: BloomApi.baseUrl,
-    );
-
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final userId = await BloomApi.getUserId();
-
-      if (userId == null || userId.trim().isEmpty) {
-        throw Exception('User belum login');
-      }
-
-      final conversations = await _messaging.getConversations(
-        userId: userId,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _userId = userId;
-        _conversations = conversations;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
-
-  Future<void> _openConversation(
-    BloomConversation conversation,
-  ) async {
-    final userId = _userId;
-
-    if (userId == null || userId.isEmpty) return;
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => BloomChatPage(
-          userId: userId,
-          conversation: conversation,
-        ),
-      ),
-    );
-
-    if (mounted) {
-      _load();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: pageBg,
-      appBar: AppBar(
-        backgroundColor: premiumBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Pesan',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const BloomStartChatPage(),
-                ),
-              );
-            },
-            tooltip: 'Pesan Baru',
-            icon: const Icon(Icons.edit_rounded),
-          ),
-          IconButton(
-            onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: premiumBlue,
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.chat_bubble_outline_rounded,
-                color: premiumBlue,
-                size: 52,
-              ),
-              const SizedBox(height: 14),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: navy,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 18),
-              ElevatedButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Coba Lagi'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_conversations.isEmpty) {
-      return RefreshIndicator(
-        color: premiumBlue,
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 150),
-            Icon(
-              Icons.forum_outlined,
-              color: premiumBlue,
-              size: 58,
-            ),
-            SizedBox(height: 16),
-            Center(
-              child: Text(
-                'Belum ada percakapan',
-                style: TextStyle(
-                  color: navy,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            SizedBox(height: 8),
-            Center(
-              child: Text(
-                'Percakapan baru akan muncul di sini.',
-                style: TextStyle(
-                  color: softText,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      color: premiumBlue,
-      onRefresh: _load,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _conversations.length,
-        separatorBuilder: (_, _) => const Divider(
-          height: 1,
-          indent: 82,
-        ),
-        itemBuilder: (context, index) {
-          final conversation = _conversations[index];
-
-          final displayName =
-              conversation.otherName.trim().isNotEmpty
-                  ? conversation.otherName.trim()
-                  : conversation.otherUsername.trim().isNotEmpty
-                      ? '@${conversation.otherUsername.trim()}'
-                      : 'BLOOM User';
-
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 7,
-            ),
-            leading: _MessagingAvatar(
-              photoUrl: conversation.otherPhotoUrl,
-              name: displayName,
-            ),
-            title: Text(
-              displayName,
-              style: const TextStyle(
-                color: navy,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            subtitle: Text(
-              conversation.lastMessage.isEmpty
-                  ? 'Mulai percakapan'
-                  : conversation.lastMessage,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: softText,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            trailing: conversation.unreadCount > 0
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: premiumBlue,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      '${conversation.unreadCount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  )
-                : const Icon(
-                    Icons.chevron_right_rounded,
-                    color: softText,
-                  ),
-            onTap: () => _openConversation(conversation),
-          );
-        },
-      ),
-    );
-  }
-}
-
-
-class BloomStartChatPage extends StatefulWidget {
-  const BloomStartChatPage({super.key});
-
-  @override
-  State<BloomStartChatPage> createState() => _BloomStartChatPageState();
-}
-
-class _BloomStartChatPageState extends State<BloomStartChatPage> {
-  late final BloomMessagingService _messaging;
-  final TextEditingController _userIdController =
-      TextEditingController();
-
-  bool _opening = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _messaging = const BloomMessagingService(
-      baseUrl: BloomApi.baseUrl,
-    );
-  }
-
-  @override
-  void dispose() {
-    _userIdController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _start() async {
-    if (_opening) return;
-
-    final otherUserId = _userIdController.text.trim();
-
-    if (otherUserId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Masukkan ID pengguna BLOOM.'),
-        ),
-      );
-      return;
-    }
-
-    try {
-      final userId = await BloomApi.getUserId();
-
-      if (userId == null || userId.trim().isEmpty) {
-        throw Exception('User belum login');
-      }
-
-      if (userId == otherUserId) {
-        throw Exception('Tidak bisa mengirim pesan ke diri sendiri');
-      }
-
-      setState(() {
-        _opening = true;
-      });
-
-      final conversation = await _messaging.createConversation(
-        userId: userId,
-        otherUserId: otherUserId,
-      );
-
-      if (!mounted) return;
-
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => BloomChatPage(
-            userId: userId,
-            conversation: conversation,
-          ),
-        ),
-      );
-
-      if (mounted) {
-        setState(() {
-          _opening = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _opening = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: pageBg,
-      appBar: AppBar(
-        backgroundColor: premiumBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Pesan Baru',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Mulai percakapan',
-              style: TextStyle(
-                color: navy,
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Masukkan ID pengguna BLOOM yang ingin kamu ajak bicara.',
-              style: TextStyle(
-                color: softText,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _userIdController,
-              decoration: InputDecoration(
-                labelText: 'User ID',
-                hintText: 'contoh: user-123',
-                prefixIcon: const Icon(
-                  Icons.person_search_rounded,
-                  color: premiumBlue,
-                ),
-                filled: true,
-                fillColor: lightBlue,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _opening ? null : _start,
-                icon: _opening
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.chat_rounded),
-                label: Text(
-                  _opening
-                      ? 'Membuka...'
-                      : 'Mulai Chat',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class BloomChatPage extends StatefulWidget {
-  final String userId;
-  final BloomConversation conversation;
-
-  const BloomChatPage({
-    super.key,
-    required this.userId,
-    required this.conversation,
-  });
-
-  @override
-  State<BloomChatPage> createState() => _BloomChatPageState();
-}
-
-class _BloomChatPageState extends State<BloomChatPage> {
-  late final BloomMessagingService _messaging;
-  late final TextEditingController _controller;
-  late final ScrollController _scrollController;
-
-  List<BloomMessage> _messages = const [];
-  bool _loading = true;
-  bool _sending = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _messaging = const BloomMessagingService(
-      baseUrl: BloomApi.baseUrl,
-    );
-
-    _controller = TextEditingController();
-    _scrollController = ScrollController();
-
-    _loadMessages();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadMessages() async {
-    try {
-      final messages = await _messaging.getMessages(
-        userId: widget.userId,
-        conversationId: widget.conversation.id,
-      );
-
-      await _messaging.markMessagesRead(
-        userId: widget.userId,
-        conversationId: widget.conversation.id,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _messages = messages;
-        _loading = false;
-        _error = null;
-      });
-
-      _scrollToBottom();
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
-  Future<void> _send() async {
-    if (_sending) return;
-
-    final body = _controller.text.trim();
-
-    if (body.isEmpty) return;
-
-    setState(() {
-      _sending = true;
-    });
-
-    try {
-      final message = await _messaging.sendMessage(
-        senderId: widget.userId,
-        receiverId: widget.conversation.otherUserId,
-        conversationId: widget.conversation.id,
-        body: body,
-      );
-
-      if (!mounted) return;
-
-      _controller.clear();
-
-      setState(() {
-        _messages = [
-          ..._messages,
-          message,
-        ];
-        _sending = false;
-      });
-
-      _scrollToBottom();
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _sending = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final displayName =
-        widget.conversation.otherName.trim().isNotEmpty
-            ? widget.conversation.otherName.trim()
-            : widget.conversation.otherUsername.trim().isNotEmpty
-                ? '@${widget.conversation.otherUsername.trim()}'
-                : 'BLOOM User';
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFE),
-      appBar: AppBar(
-        backgroundColor: premiumBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        titleSpacing: 4,
-        title: Row(
-          children: [
-            _MessagingAvatar(
-              photoUrl: widget.conversation.otherPhotoUrl,
-              name: displayName,
-              radius: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                displayName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: _loadMessages,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _buildMessages(),
-          ),
-          _buildComposer(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessages() {
-    if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: premiumBlue,
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Text(
-          _error!,
-          style: const TextStyle(
-            color: navy,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      );
-    }
-
-    if (_messages.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.forum_outlined,
-              color: premiumBlue,
-              size: 52,
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Belum ada pesan',
-              style: TextStyle(
-                color: navy,
-                fontWeight: FontWeight.w900,
-                fontSize: 17,
-              ),
-            ),
-            SizedBox(height: 5),
-            Text(
-              'Kirim pesan pertama.',
-              style: TextStyle(
-                color: softText,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final message = _messages[index];
-        final mine = message.senderId == widget.userId;
-
-        return Align(
-          alignment:
-              mine ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            constraints: const BoxConstraints(
-              maxWidth: 320,
-            ),
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: mine ? premiumBlue : Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(mine ? 18 : 5),
-                bottomRight: Radius.circular(mine ? 5 : 18),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Text(
-              message.body,
-              style: TextStyle(
-                color: mine ? Colors.white : navy,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildComposer() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: Color(0xFFE2EAF3),
-            ),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                minLines: 1,
-                maxLines: 5,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: 'Tulis pesan...',
-                  hintStyle: const TextStyle(
-                    color: softText,
-                  ),
-                  filled: true,
-                  fillColor: lightBlue,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 11,
-                  ),
-                ),
-                onSubmitted: (_) => _send(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Material(
-              color: premiumBlue,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: _sending ? null : _send,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Center(
-                    child: _sending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                          ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MessagingAvatar extends StatelessWidget {
-  final String photoUrl;
-  final String name;
-  final double radius;
-
-  const _MessagingAvatar({
-    required this.photoUrl,
-    required this.name,
-    this.radius = 27,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final raw = photoUrl.trim();
-
-    String? resolved;
-
-    if (raw.isNotEmpty) {
-      resolved = raw.startsWith('http://') ||
-              raw.startsWith('https://')
-          ? raw
-          : raw.startsWith('/')
-              ? '${BloomApi.baseUrl}$raw'
-              : '${BloomApi.baseUrl}/$raw';
-    }
-
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: premiumBlue,
-      backgroundImage:
-          resolved == null ? null : NetworkImage(resolved),
-      child: resolved == null
-          ? Text(
-              name.isEmpty ? 'B' : name[0].toUpperCase(),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: radius * .7,
-                fontWeight: FontWeight.w900,
-              ),
-            )
-          : null,
-    );
-  }
-}
-
 
 class _SimplePage extends StatelessWidget {
   final IconData icon;
