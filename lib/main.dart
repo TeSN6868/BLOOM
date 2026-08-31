@@ -1906,18 +1906,151 @@ class _BloomHomePageState extends State<BloomHomePage> {
 
               const SizedBox(height: 22),
 
-              const Text(
-                'Status',
-                style: TextStyle(
-                  color: navy,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
+              Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Status',
+                      style: TextStyle(
+                        color: navy,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: createThought,
+                      icon: const Icon(
+                        Icons.add_rounded,
+                        size: 18,
+                        color: premiumBlue,
+                      ),
+                      label: const Text(
+                        'Buat',
+                        style: TextStyle(
+                          color: premiumBlue,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
 
-              const SizedBox(height: 20),
-              if (_searching && _searchQuery.trim().isNotEmpty)
+                const SizedBox(height: 10),
+
+                InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: createThought,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: const Color(0xFFE4ECF7),
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x12063B78),
+                          blurRadius: 18,
+                          offset: Offset(0, 7),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF003B73),
+                                Color(0xFF1976D2),
+                              ],
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.auto_awesome_rounded,
+                            color: Colors.white,
+                            size: 23,
+                          ),
+                        ),
+                        const SizedBox(width: 13),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bagikan sesuatu hari ini',
+                                style: TextStyle(
+                                  color: navy,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Tulis Moment kecilmu. Biar tetap berarti.',
+                                style: TextStyle(
+                                  color: softText,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: premiumBlue,
+                          size: 25,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Moments',
+                      style: TextStyle(
+                        color: navy,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (posts.isNotEmpty)
+                      Text(
+                        '${_filteredPosts.length}',
+                        style: const TextStyle(
+                          color: premiumBlue,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                const SizedBox(height: 20),
+                if (_searching && _searchQuery.trim().isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: Text(
@@ -3425,10 +3558,12 @@ class CreateBloomSheet extends StatefulWidget {
     String? location,
     String? voicePath,
     String? listening,
-  })?
-  onCreate;
+  })? onCreate;
 
-  const CreateBloomSheet({super.key, this.onCreate});
+  const CreateBloomSheet({
+    super.key,
+    this.onCreate,
+  });
 
   @override
   State<CreateBloomSheet> createState() => _CreateBloomSheetState();
@@ -3443,6 +3578,7 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
   String? location;
   String? voicePath;
   String? listening;
+
   bool recording = false;
   bool publishing = false;
   bool publishAsStatus = false;
@@ -3459,7 +3595,10 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
     final file = await picker.pickImage(source: ImageSource.gallery);
 
     if (file != null && mounted) {
-      setState(() => image = file);
+      setState(() {
+        image = file;
+        video = null;
+      });
     }
   }
 
@@ -3468,7 +3607,10 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
     final file = await picker.pickVideo(source: ImageSource.gallery);
 
     if (file != null && mounted) {
-      setState(() => video = file);
+      setState(() {
+        video = file;
+        image = null;
+      });
     }
   }
 
@@ -3488,7 +3630,9 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
       return;
     }
 
-    setState(() => location = result);
+    setState(() {
+      location = result;
+    });
   }
 
   Future<void> toggleVoice() async {
@@ -3499,7 +3643,9 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
 
       if (path == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin mikrofon belum diberikan.')),
+          const SnackBar(
+            content: Text('Izin mikrofon belum diberikan.'),
+          ),
         );
         return;
       }
@@ -3508,6 +3654,7 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
         recording = true;
         voicePath = path;
       });
+
       return;
     }
 
@@ -3553,7 +3700,13 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
                   Icons.music_note_rounded,
                   color: premiumBlue,
                 ),
-                title: Text(item),
+                title: Text(
+                  item,
+                  style: const TextStyle(
+                    color: navy,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 onTap: () => Navigator.pop(context, item),
               ),
           ],
@@ -3581,18 +3734,24 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
         listening == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Tambahkan sesuatu sebelum membuat Bloom.'),
+          content: Text(
+            'Tambahkan sesuatu sebelum membuat Bloom.',
+          ),
         ),
       );
       return;
     }
 
-    setState(() => publishing = true);
+    setState(() {
+      publishing = true;
+    });
 
     try {
       if (publishAsStatus) {
         if (text.isEmpty) {
-          throw Exception('Status Story membutuhkan teks.');
+          throw Exception(
+            'Status Story membutuhkan teks.',
+          );
         }
 
         final userId = await BloomApi.getUserId();
@@ -3601,12 +3760,19 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
           throw Exception('user_id_required');
         }
 
-        await BloomApi.updateProfileStatus(userId: userId, text: text);
+        await BloomApi.updateProfileStatus(
+          userId: userId,
+          text: text,
+        );
 
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Status berhasil dikirim ke Story.')),
+          const SnackBar(
+            content: Text(
+              'Status berhasil dikirim ke Story.',
+            ),
+          ),
         );
 
         Navigator.pop(context);
@@ -3638,154 +3804,329 @@ class _CreateBloomSheetState extends State<CreateBloomSheet> {
       );
     } finally {
       if (mounted) {
-        setState(() => publishing = false);
+        setState(() {
+          publishing = false;
+        });
       }
     }
+  }
+
+  Widget _toolButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool active = false,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(17),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 13,
+          vertical: 11,
+        ),
+        decoration: BoxDecoration(
+          color: active ? premiumBlue : lightBlue,
+          borderRadius: BorderRadius.circular(17),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 19,
+              color: active ? Colors.white : premiumBlue,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(
+                color: active ? Colors.white : navy,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _previewCard() {
+    if (image == null && video == null && location == null &&
+        voicePath == null && listening == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 15),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: lightBlue,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (image != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.file(
+                File(image!.path),
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+          if (video != null)
+            const _Pill(
+              'Video siap',
+              Icons.videocam_rounded,
+            ),
+
+          if (location != null) ...[
+            const SizedBox(height: 8),
+            _Pill(
+              location!,
+              Icons.location_on_rounded,
+            ),
+            const SizedBox(height: 8),
+            _BloomLocationMap(
+              location: location!,
+            ),
+          ],
+
+          if (voicePath != null) ...[
+            const SizedBox(height: 8),
+            const _Pill(
+              'Voice siap',
+              Icons.mic_rounded,
+            ),
+          ],
+
+          if (listening != null) ...[
+            const SizedBox(height: 8),
+            _Pill(
+              listening!,
+              Icons.music_note_rounded,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          8,
+          20,
+          30,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(
-              child: Text(
-                'Create a Bloom',
-                style: TextStyle(
-                  color: navy,
-                  fontSize: 23,
-                  fontWeight: FontWeight.w900,
+            Center(
+              child: Container(
+                width: 42,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
+
             const SizedBox(height: 18),
 
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Tampilkan di Story',
-                style: TextStyle(color: navy, fontWeight: FontWeight.w800),
-              ),
-              subtitle: const Text(
-                'Status ini akan tampil di Story.',
-                style: TextStyle(color: softText, fontSize: 12),
-              ),
-              value: publishAsStatus,
-              activeThumbColor: premiumBlue,
-              onChanged: (value) {
-                setState(() {
-                  publishAsStatus = value;
-                });
-              },
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: premiumBlue,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Icon(
+                    Icons.local_florist_rounded,
+                    color: Colors.white,
+                    size: 25,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Create a Bloom',
+                        style: TextStyle(
+                          color: navy,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Bagikan apa yang sedang tumbuh hari ini.',
+                        style: TextStyle(
+                          color: softText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
 
-            TextField(
-              controller: textController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                hintText: 'Apa yang ingin kamu bagikan hari ini?',
-                filled: true,
-                fillColor: lightBlue,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
+            Container(
+              decoration: BoxDecoration(
+                color: lightBlue,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: TextField(
+                controller: textController,
+                maxLines: 5,
+                minLines: 4,
+                style: const TextStyle(
+                  color: navy,
+                  fontSize: 15,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: const InputDecoration(
+                  hintText:
+                      'Apa yang ingin kamu bagikan hari ini?',
+                  hintStyle: TextStyle(
+                    color: softText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  contentPadding: EdgeInsets.all(18),
+                  border: InputBorder.none,
                 ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                ActionChip(
-                  avatar: const Icon(Icons.photo_outlined),
-                  label: Text(image == null ? 'Foto' : 'Foto ✓'),
-                  onPressed: pickImage,
+                _toolButton(
+                  icon: Icons.photo_outlined,
+                  label: image == null ? 'Foto' : 'Foto ✓',
+                  active: image != null,
+                  onTap: pickImage,
                 ),
-                ActionChip(
-                  avatar: const Icon(Icons.videocam_outlined),
-                  label: Text(video == null ? 'Video' : 'Video ✓'),
-                  onPressed: pickVideo,
+                _toolButton(
+                  icon: Icons.videocam_outlined,
+                  label: video == null ? 'Video' : 'Video ✓',
+                  active: video != null,
+                  onTap: pickVideo,
                 ),
-                ActionChip(
-                  avatar: const Icon(Icons.location_on_outlined),
-                  label: Text(location == null ? 'Lokasi' : 'Lokasi ✓'),
-                  onPressed: pickLocation,
+                _toolButton(
+                  icon: Icons.location_on_outlined,
+                  label: location == null ? 'Lokasi' : 'Lokasi ✓',
+                  active: location != null,
+                  onTap: pickLocation,
                 ),
-                ActionChip(
-                  avatar: Icon(
-                    recording
-                        ? Icons.stop_circle_outlined
-                        : Icons.mic_none_rounded,
-                  ),
-                  label: Text(recording ? 'Stop Voice' : 'Voice'),
-                  onPressed: toggleVoice,
+                _toolButton(
+                  icon: recording
+                      ? Icons.stop_circle_outlined
+                      : Icons.mic_none_rounded,
+                  label: recording ? 'Stop Voice' : 'Voice',
+                  active: recording || voicePath != null,
+                  onTap: toggleVoice,
                 ),
-                ActionChip(
-                  avatar: const Icon(Icons.music_note_rounded),
-                  label: Text(listening == null ? 'Listening' : listening!),
-                  onPressed: chooseListening,
+                _toolButton(
+                  icon: Icons.music_note_rounded,
+                  label: listening == null
+                      ? 'Listening'
+                      : listening!,
+                  active: listening != null,
+                  onTap: chooseListening,
                 ),
               ],
             ),
 
-            if (image != null) ...[
-              const SizedBox(height: 14),
-              ClipRRect(
+            _previewCard(),
+
+            const SizedBox(height: 18),
+
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 5,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                child: Image.file(
-                  File(image!.path),
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+                border: Border.all(
+                  color: lightBlue,
+                  width: 1.5,
                 ),
               ),
-            ],
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Tampilkan di Story',
+                  style: TextStyle(
+                    color: navy,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Bagikan juga sebagai status Story.',
+                  style: TextStyle(
+                    color: softText,
+                    fontSize: 11,
+                  ),
+                ),
+                value: publishAsStatus,
+                activeThumbColor: premiumBlue,
+                onChanged: (value) {
+                  setState(() {
+                    publishAsStatus = value;
+                  });
+                },
+              ),
+            ),
 
-            if (video != null) ...[
-              const SizedBox(height: 10),
-              const _Pill('Video siap', Icons.videocam_rounded),
-            ],
-
-            if (location != null) ...[
-              const SizedBox(height: 10),
-              _Pill(location!, Icons.location_on_rounded),
-              const SizedBox(height: 10),
-              _BloomLocationMap(location: location!),
-            ],
-
-            if (voicePath != null) ...[
-              const SizedBox(height: 10),
-              const _Pill('Voice siap', Icons.mic_rounded),
-            ],
-
-            if (listening != null) ...[
-              const SizedBox(height: 10),
-              _Pill(listening!, Icons.music_note_rounded),
-            ],
-
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
             SizedBox(
               width: double.infinity,
-              height: 54,
+              height: 56,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: premiumBlue,
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(19),
+                  ),
                 ),
                 onPressed: publishing ? null : publish,
-                icon: const Icon(Icons.bubble_chart_rounded),
+                icon: Icon(
+                  publishing
+                      ? Icons.hourglass_top_rounded
+                      : Icons.bubble_chart_rounded,
+                ),
                 label: Text(
                   publishing ? 'MEMBUAT...' : 'POST BLOOM',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .3,
+                  ),
                 ),
               ),
             ),
